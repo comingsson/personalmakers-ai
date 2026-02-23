@@ -636,87 +636,53 @@ function clearHistory() {
 function exportTxt() {
   const records = loadHistory();
   if (!records.length) return;
+  const ML = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'};
   const lines = records.map((r, i) => {
-    const missionLabel = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'}[r.missionType] || r.missionType;
-    return [
-      `${'='.repeat(60)}`,
-      `[${i+1}] ${r.student || '수강생'} · ${missionLabel} · ${r.time}`,
-      `${'='.repeat(60)}`,
-      ``,
-      `【질문 / 제출 내용】`,
-      r.mission || '(내용 없음)',
-      ``,
-      `【Personalmakers AI 피드백】`,
-      r.answer,
-      ``,
-    ].join('
-');
+    const label = ML[r.missionType] || r.missionType;
+    return '='.repeat(60) + '\n' +
+      '[' + (i+1) + '] ' + (r.student||'수강생') + ' · ' + label + ' · ' + r.time + '\n' +
+      '='.repeat(60) + '\n\n' +
+      '【질문 / 제출 내용】\n' +
+      (r.mission || '(내용 없음)') + '\n\n' +
+      '【Personalmakers AI 피드백】\n' +
+      r.answer + '\n';
   });
-  const blob = new Blob([lines.join('
-')], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `피드백_히스토리_${new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','')}.txt`;
+  const date = new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','');
+  a.download = '피드백_히스토리_' + date + '.txt';
   a.click();
 }
 
 function copyAllHistory() {
   const records = loadHistory();
   if (!records.length) return;
-  const missionLabel = r => ({channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'}[r.missionType] || r.missionType);
-  const text = records.map((r, i) => [
-    `[${i+1}] ${r.student || '수강생'} · ${missionLabel(r)} · ${r.time}`,
-    ``,
-    `【질문 / 제출 내용】`,
-    r.mission || '(내용 없음)',
-    ``,
-    `【Personalmakers AI 피드백】`,
-    r.answer,
-    `${'─'.repeat(40)}`,
-  ].join('
-')).join('
-
-');
+  const ML = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'};
+  const text = records.map((r, i) => {
+    const label = ML[r.missionType] || r.missionType;
+    return '[' + (i+1) + '] ' + (r.student||'수강생') + ' · ' + label + ' · ' + r.time + '\n\n' +
+      '【질문 / 제출 내용】\n' + (r.mission||'(내용 없음)') + '\n\n' +
+      '【Personalmakers AI 피드백】\n' + r.answer + '\n' + '─'.repeat(40);
+  }).join('\n\n');
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.querySelector('[onclick="copyAllHistory()"]');
-    btn.textContent = '✅ 복사됨'; setTimeout(() => btn.textContent = '📋 복사', 1500);
+    if (btn) { btn.textContent = '✅ 복사됨'; setTimeout(() => btn.textContent = '📋 복사', 1500); }
   });
 }
 
 function exportPDF() {
   const records = loadHistory();
   if (!records.length) return;
-  const missionLabel = r => ({channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'}[r.missionType] || r.missionType);
-
+  const ML = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'};
   const win = window.open('', '_blank');
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>피드백 히스토리</title>
-  <style>
-    body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 32px; color: #1a1714; font-size: 13px; line-height: 1.8; }
-    h1 { font-size: 20px; color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 28px; }
-    .card { margin-bottom: 36px; page-break-inside: avoid; border: 1px solid #e8e3d8; border-radius: 8px; overflow: hidden; }
-    .card-header { background: #f7f5f0; padding: 10px 16px; font-size: 11px; color: #8a8178; display: flex; justify-content: space-between; border-bottom: 1px solid #e8e3d8; }
-    .card-header strong { color: #1a1714; font-size: 13px; }
-    .mission { background: #f0f7ff; border-left: 3px solid #2563eb; padding: 10px 14px; margin: 14px 16px 0; border-radius: 4px; font-size: 12px; color: #4a443c; white-space: pre-wrap; }
-    .mission-label { font-size: 10px; font-weight: 700; color: #2563eb; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
-    .feedback { padding: 14px 16px; white-space: pre-wrap; font-size: 13px; }
-    .num { display: inline-block; background: #2563eb; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; }
-    @media print { body { padding: 20px; } }
-  </style></head><body>
-  <h1>✍️ Personalmakers AI 피드백 히스토리</h1>
-  <p style="color:#8a8178;font-size:11px;margin-bottom:28px">내보낸 날짜: ${new Date().toLocaleString('ko-KR')} · 총 ${records.length}건</p>
-  ${records.map((r, i) => `
-  <div class="card">
-    <div class="card-header">
-      <div><span class="num">${i+1}</span><strong>${r.student || '수강생'}</strong> · ${missionLabel(r)}</div>
-      <div>${r.time}</div>
-    </div>
-    ${r.mission ? `<div class="mission"><div class="mission-label">📝 제출 내용</div>${r.mission.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
-    <div class="feedback">${r.answer.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>
-  </div>`).join('')}
-  <script>window.onload=()=>window.print()<\/script>
-  </body></html>`;
-  win.document.write(html);
+  const cards = records.map((r, i) => {
+    const label = ML[r.missionType] || r.missionType;
+    const mission = r.mission ? '<div class="mission"><div class="mission-label">📝 제출 내용</div>' + r.mission.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : '';
+    const answer = r.answer.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<div class="card"><div class="card-header"><div><span class="num">' + (i+1) + '</span><strong>' + (r.student||'수강생') + '</strong> · ' + label + '</div><div>' + r.time + '</div></div>' + mission + '<div class="feedback">' + answer + '</div></div>';
+  }).join('');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>피드백 히스토리</title><style>body{font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;max-width:800px;margin:0 auto;padding:40px 32px;color:#1a1714;font-size:13px;line-height:1.8}h1{font-size:20px;color:#2563eb;border-bottom:2px solid #2563eb;padding-bottom:10px;margin-bottom:28px}.card{margin-bottom:36px;page-break-inside:avoid;border:1px solid #e8e3d8;border-radius:8px;overflow:hidden}.card-header{background:#f8fafc;padding:10px 16px;font-size:11px;color:#8a8178;display:flex;justify-content:space-between;border-bottom:1px solid #e8e3d8}.card-header strong{color:#1a1714;font-size:13px}.mission{background:#eff6ff;border-left:3px solid #2563eb;padding:10px 14px;margin:14px 16px 0;border-radius:4px;font-size:12px;color:#1e40af;white-space:pre-wrap}.mission-label{font-size:10px;font-weight:700;color:#2563eb;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:5px}.feedback{padding:14px 16px;white-space:pre-wrap;font-size:13px}.num{display:inline-block;background:#2563eb;color:white;border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:11px;font-weight:700;margin-right:6px}@media print{body{padding:20px}}</style></head><body><h1>✍️ Personalmakers AI 피드백 히스토리</h1><p style="color:#8a8178;font-size:11px;margin-bottom:28px">내보낸 날짜: ' + new Date().toLocaleString('ko-KR') + ' · 총 ' + records.length + '건</p>' + cards + '<script>window.onload=function(){window.print()}<\/script></body></html>');
   win.document.close();
 }
 
