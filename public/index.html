@@ -81,7 +81,8 @@ body {
 
 /* ─── Left: Mission Input ─── */
 .mission-panel {
-  display: flex; flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   overflow: hidden;
   border-right: 1px solid var(--border);
   height: 100%;
@@ -97,8 +98,9 @@ body {
 .mission-sub { font-size: 12px; color: var(--ink-light); margin-top: 4px; }
 
 .mission-body {
-  flex: 1; overflow-y: auto; padding: 24px 32px;
+  overflow-y: auto; padding: 24px 32px;
   display: flex; flex-direction: column; gap: 16px;
+  min-height: 0;
 }
 .mission-body::-webkit-scrollbar { width: 3px; }
 .mission-body::-webkit-scrollbar-thumb { background: var(--border-dark); }
@@ -263,6 +265,21 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   font-size: 12px; color: #8a6a00; font-family: var(--mono);
   display: none;
 }
+
+/* ─── Follow-up ─── */
+.fb-followup { border-top: 1px solid var(--border); padding: 12px 16px; background: var(--bg); }
+.fb-followup-label { font-size: 10px; font-weight: 700; color: var(--ink-light); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+.fb-followup-row { display: flex; gap: 8px; }
+.fb-followup-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; font-family: var(--font); font-size: 13px; color: var(--ink); outline: none; transition: border-color .15s; }
+.fb-followup-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.fb-followup-btn { background: var(--accent); color: white; border: none; border-radius: 7px; padding: 9px 16px; font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.fb-followup-btn:hover { background: #1d4ed8; }
+.fb-followup-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.fb-qa { border-top: 1px solid var(--border); }
+.fb-q { padding: 10px 16px; background: #eff6ff; border-left: 3px solid var(--accent); font-size: 12px; color: #1e40af; }
+.fb-q-label { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 3px; }
+.fb-a { padding: 14px 16px; font-size: 14px; line-height: 1.9; color: var(--ink); white-space: pre-wrap; }
 
 /* ─── History Buttons ─── */
 .feedback-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
@@ -724,9 +741,80 @@ function showFeedback(record) {
       <div class="fb-src-label">📎 참고한 지식 (${record.sources.length}개)</div>
       ${record.sources.map(s => `<span class="src-pill">${escHtml(s.docName)}</span>`).join('')}
     </div>` : ''}
+    <div class="fb-qa" id="qa-${record.id || Date.now()}"></div>
+    <div class="fb-followup">
+      <div class="fb-followup-label">💬 추가 질문</div>
+      <div class="fb-followup-row">
+        <input class="fb-followup-input" type="text" placeholder="피드백에 대해 더 궁금한 점을 물어보세요..."
+          onkeydown="if(event.key==='Enter')askFollowup(this)" />
+        <button class="fb-followup-btn" onclick="askFollowup(this.previousElementSibling)">전송</button>
+      </div>
+    </div>
   `;
   body.insertBefore(card, body.firstChild);
   document.getElementById('fbSub').textContent = `${record.student} · ${missionLabel} 피드백 완료`;
+}
+
+async function askFollowup(input) {
+  var question = input.value.trim();
+  if (!question || isLoading) return;
+  var card = input.closest('.fb-card');
+  var qaDiv = card.querySelector('.fb-qa');
+  var btn = input.nextElementSibling;
+
+  var origMission = card.querySelector('.fb-mission-text') ? card.querySelector('.fb-mission-text').textContent : '';
+  var origFeedback = card.querySelector('.fb-content').textContent;
+  var prevQAs = Array.from(card.querySelectorAll('.fb-q')).map(function(q) {
+    var qText = q.lastChild ? q.lastChild.textContent : q.textContent;
+    var aEl = q.nextElementSibling;
+    return 'Q: ' + qText.trim() + '\nA: ' + (aEl ? aEl.textContent.trim() : '');
+  }).join('\n\n');
+
+  input.value = '';
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  var qDiv = document.createElement('div');
+  qDiv.className = 'fb-q';
+  qDiv.innerHTML = '<div class="fb-q-label">추가 질문</div>' + escHtml(question);
+  qaDiv.appendChild(qDiv);
+
+  var aDiv = document.createElement('div');
+  aDiv.className = 'fb-a';
+  aDiv.textContent = '답변 생성 중...';
+  qaDiv.appendChild(aDiv);
+
+  try {
+    var contextQ = '원본 제출 내용:\n' + origMission +
+      '\n\n원본 피드백:\n' + origFeedback +
+      (prevQAs ? '\n\n이전 추가 Q&A:\n' + prevQAs : '') +
+      '\n\n추가 질문: ' + question;
+
+    var hits = [];
+    try {
+      var embedRes = await fetch('/api/embed', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts: [question], taskType: 'RETRIEVAL_QUERY' }),
+      });
+      var embedData = await embedRes.json();
+      if (!embedData.error) hits = retrieve(embedData.embeddings[0], 3);
+    } catch(e2) {}
+
+    var missionType = document.getElementById('missionType').value;
+    var studentName = document.getElementById('studentName').value.trim();
+    var fbRes = await fetch('/api/feedback', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: contextQ, category: missionType, studentName: studentName, mode: 'conv', hits: hits }),
+    });
+    var fbData = await fbRes.json();
+    if (fbData.error) throw new Error(fbData.error);
+    aDiv.textContent = fbData.feedback;
+  } catch(e) {
+    aDiv.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '전송';
+  }
 }
 
 function copyFeedback(btn) {
