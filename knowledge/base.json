@@ -1,0 +1,8 @@
+{
+  "_comment": "커밍쏜의 지식베이스 — 대본과 컨설팅 내용을 임베딩 변환해서 여기에 저장합니다",
+  "_how_to_update": "tools/build-knowledge.html 을 열어서 문서를 추가하면 이 파일이 자동으로 업데이트됩니다",
+  "version": "1.0",
+  "updatedAt": "",
+  "totalChunks": 0,
+  "documents": []
+}

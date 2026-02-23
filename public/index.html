@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Personalmakers AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f7f5f0;
+  --paper: #fdfcf9;
+  --surface: #ffffff;
+  --border: #e8e3d8;
+  --border-dark: #d0c9b8;
+  --ink: #1a1714;
+  --ink-mid: #4a443c;
+  --ink-light: #8a8178;
+  --accent: #c8622a;
+  --accent-soft: #f5ede5;
+  --accent-border: #e8c4a8;
+  --blue: #3d4a5c;
+  --blue-soft: #eef0f3;
+  --green: #2a7a4a;
+  --green-soft: #e8f5ed;
+  --r: 8px;
+  --font: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  --serif: 'Noto Serif KR', Georgia, serif;
+  --mono: 'JetBrains Mono', monospace;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+}
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(200,98,42,.05) 0%, transparent 50%),
+    radial-gradient(circle at 85% 85%, rgba(200,98,42,.03) 0%, transparent 50%);
+  color: var(--ink);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Top Bar ─── */
+.top-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px; flex-shrink: 0;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-badge {
+  background: var(--accent); color: white;
+  font-size: 10px; font-weight: 700; padding: 3px 8px;
+  border-radius: 4px; letter-spacing: 0.5px;
+}
+.brand-name { font-family: var(--serif); font-size: 16px; letter-spacing: -0.3px; }
+.brand-sub {
+  font-size: 11px; color: var(--ink-light); font-family: var(--mono);
+  border-left: 1px solid var(--border); padding-left: 10px; margin-left: 2px;
+}
+.kb-status {
+  font-size: 11px; color: var(--ink-light); font-family: var(--mono);
+  display: flex; align-items: center; gap: 6px;
+}
+.kb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ─── Main Layout ─── */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 56px);
+}
+
+/* ─── Left: Mission Input ─── */
+.mission-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.mission-header {
+  padding: 24px 32px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mission-title { font-family: var(--serif); font-size: 22px; letter-spacing: -0.5px; }
+.mission-sub { font-size: 12px; color: var(--ink-light); margin-top: 4px; }
+
+.mission-body {
+  flex: 1; overflow-y: auto; padding: 24px 32px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.mission-body::-webkit-scrollbar { width: 3px; }
+.mission-body::-webkit-scrollbar-thumb { background: var(--border-dark); }
+
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.lbl {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
+  text-transform: uppercase; color: var(--ink-light); display: block;
+}
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+input.inp, select.sel, textarea.txa {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 10px 12px; color: var(--ink);
+  font-family: var(--font); font-size: 13px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input.inp:focus, select.sel:focus, textarea.txa:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,98,42,.08);
+}
+input.inp::placeholder, textarea.txa::placeholder { color: var(--ink-light); }
+textarea.txa { resize: vertical; line-height: 1.7; }
+
+.mission-txa {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px; color: var(--ink);
+  font-family: var(--font); font-size: 14px; line-height: 1.8;
+  outline: none; resize: vertical; min-height: 160px;
+  transition: border-color .15s, box-shadow .15s; width: 100%;
+}
+.mission-txa:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,98,42,.08); }
+.mission-txa::placeholder { color: var(--ink-light); }
+
+.char-count { font-size: 11px; color: var(--ink-light); font-family: var(--mono); text-align: right; margin-top: 3px; }
+
+.mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mode-btn {
+  padding: 11px 12px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface); color: var(--ink-mid); font-family: var(--font);
+  font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; text-align: center;
+}
+.mode-btn.active { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+.mode-btn:hover:not(.active) { border-color: var(--border-dark); }
+.mode-btn small { display: block; font-size: 10px; opacity: .65; margin-top: 2px; font-weight: 400; }
+
+.mission-footer {
+  padding: 16px 32px; border-top: 1px solid var(--border);
+  background: var(--surface); display: flex; gap: 10px; flex-shrink: 0;
+}
+.btn {
+  padding: 11px 20px; border: none; border-radius: var(--r);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-primary { background: var(--accent); color: white; flex: 1; }
+.btn-primary:hover:not(:disabled) { background: #b8551f; box-shadow: 0 3px 10px rgba(200,98,42,.3); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--ink-mid); }
+.btn-ghost:hover { background: var(--bg); border-color: var(--border-dark); }
+
+/* ─── Right: Feedback Output ─── */
+.feedback-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--paper);
+}
+
+.feedback-header {
+  padding: 16px 24px 12px; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.feedback-htitle { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-light); }
+.feedback-hsub { font-size: 11px; color: var(--ink-light); font-family: var(--mono); margin-top: 2px; }
+
+.feedback-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.feedback-body::-webkit-scrollbar { width: 3px; }
+.feedback-body::-webkit-scrollbar-thumb { background: var(--border-dark); }
+
+/* Empty state */
+.fb-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; gap: 10px; color: var(--ink-light); padding: 40px 20px;
+}
+.fb-empty .icon { font-size: 40px; opacity: .2; }
+.fb-empty h3 { font-family: var(--serif); font-size: 16px; color: var(--ink); opacity: .35; }
+.fb-empty p { font-size: 12px; line-height: 1.7; max-width: 200px; }
+
+/* Loading */
+.fb-loading {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; padding: 40px 20px;
+}
+.spinner {
+  width: 30px; height: 30px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label { font-size: 12px; font-family: var(--mono); color: var(--ink-mid); }
+.loading-steps { font-size: 11px; color: var(--ink-light); text-align: center; line-height: 1.8; }
+
+/* Feedback card */
+.fb-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  box-shadow: var(--shadow); animation: fadeUp .35s ease; margin-bottom: 14px;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+.fb-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px; background: var(--bg); border-bottom: 1px solid var(--border);
+  font-size: 11px; color: var(--ink-light); font-family: var(--mono);
+}
+.fb-badge {
+  padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border);
+}
+.fb-badge.struct { background: #f0eeeb; color: var(--ink-mid); border-color: var(--border-dark); }
+
+.fb-content {
+  padding: 18px 20px; font-size: 14px; line-height: 1.9;
+  color: var(--ink); white-space: pre-wrap;
+}
+
+.fb-sources {
+  padding: 10px 14px; border-top: 1px solid var(--border); background: var(--bg);
+}
+.fb-src-label { font-size: 10px; font-weight: 700; color: var(--ink-light); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
+.src-pill {
+  display: inline-block; font-size: 10px; font-family: var(--mono);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 2px 8px; border-radius: 4px; margin: 2px 3px 2px 0; color: var(--ink-mid);
+}
+
+/* Copy btn */
+.copy-btn {
+  background: none; border: 1px solid var(--border); border-radius: 5px;
+  padding: 3px 10px; font-size: 11px; color: var(--ink-light); cursor: pointer;
+  font-family: var(--mono); transition: all .15s;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Error */
+.err-box {
+  margin: 0 20px 12px;
+  background: #fdecea; border: 1px solid #f5c6c0;
+  border-radius: var(--r); padding: 10px 14px;
+  font-size: 12px; color: #c0392b; font-family: var(--mono);
+}
+
+/* KB empty warning */
+.kb-warning {
+  margin: 0 20px 12px;
+  background: #fff8e8; border: 1px solid #f0d88a;
+  border-radius: var(--r); padding: 10px 14px;
+  font-size: 12px; color: #8a6a00; font-family: var(--mono);
+  display: none;
+}
+
+/* ─── Password Gate ─── */
+#pwGate {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #1c1a17;
+  display: flex; align-items: center; justify-content: center;
+}
+.pw-box {
+  background: #262320; border: 1px solid #3a3530;
+  border-radius: 16px; padding: 44px 40px;
+  text-align: center; width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.pw-logo { font-size: 38px; opacity: .9; }
+.pw-title { font-family: 'Noto Serif KR', Georgia, serif; font-size: 22px; color: #f5f0e8; letter-spacing: -0.3px; }
+.pw-sub { font-size: 12px; color: rgba(255,255,255,.35); font-family: 'JetBrains Mono', monospace; }
+.pw-input-wrap { width: 100%; position: relative; }
+.pw-input {
+  width: 100%; background: #1c1a17; border: 1px solid #3a3530;
+  border-radius: 10px; padding: 14px 18px; color: #f5f0e8;
+  font-size: 22px; font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 6px; text-align: center; outline: none;
+  transition: border-color .2s;
+}
+.pw-input:focus { border-color: #c8622a; }
+.pw-input.shake { animation: shake .4s ease; }
+.pw-input.error { border-color: #c0392b; color: #ff8099; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-6px)}
+  80%{transform:translateX(6px)}
+}
+.pw-btn {
+  width: 100%; padding: 13px; border: none; border-radius: 10px;
+  background: #c8622a; color: white;
+  font-family: 'Pretendard', sans-serif; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all .2s; letter-spacing: -0.2px;
+}
+.pw-btn:hover { background: #b8551f; transform: translateY(-1px); }
+.pw-err { font-size: 12px; color: #ff8099; font-family: 'JetBrains Mono', monospace; height: 16px; }
+</style>
+</head>
+<body>
+
+<!-- Password Gate -->
+<div id="pwGate">
+  <div class="pw-box">
+    <div class="pw-logo">✨</div>
+    <div class="pw-title">Personalmakers AI</div>
+    <div class="pw-sub">Personalmakers AI · 비밀번호를 입력해주세요</div>
+    <div class="pw-input-wrap">
+      <input class="pw-input" id="pwInput" type="password" maxlength="10"
+        placeholder="••••" onkeydown="if(event.key==='Enter')checkPW()" autofocus />
+    </div>
+    <div class="pw-err" id="pwErr"></div>
+    <button class="pw-btn" onclick="checkPW()">입장하기</button>
+  </div>
+</div>
+
+
+<div class="top-bar">
+  <div class="brand">
+    <div class="brand-badge">Personalmakers AI</div>
+    <div class="brand-name">피드백 어시스턴트</div>
+    <div class="brand-sub">Director's Tool</div>
+  </div>
+  <div class="kb-status" id="kbStatus">
+    <div class="kb-dot"></div>
+    <span id="kbStatusTxt">지식베이스 로딩 중...</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── 미션 입력 ── -->
+  <div class="mission-panel">
+    <div class="mission-header">
+      <div class="mission-title">수강생 미션 피드백</div>
+      <div class="mission-sub">수강생의 제출 내용을 입력하고 Personalmakers AI 관점으로 피드백을 받으세요</div>
+    </div>
+
+    <div class="mission-body">
+      <div class="row2">
+        <div class="field-group">
+          <label class="lbl">수강생 이름 (선택)</label>
+          <input type="text" class="inp" id="studentName" placeholder="예: 홍길동 수강생" />
+        </div>
+        <div class="field-group">
+          <label class="lbl">미션 유형</label>
+          <select class="sel" id="missionType">
+            <option value="channel">채널 기획 / 콘셉트</option>
+            <option value="content">콘텐츠 아이디어 / 기획</option>
+            <option value="script">영상 대본</option>
+            <option value="thumbnail">썸네일 / 제목</option>
+            <option value="branding">채널 브랜딩 전략</option>
+            <option value="review">채널 운영 현황 리뷰</option>
+            <option value="free">자유 질문 / 기타</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">수강생 제출 내용 *</label>
+        <textarea class="mission-txa" id="missionContent" rows="7"
+          oninput="onMissionInput()"
+          placeholder="수강생이 제출한 미션 내용을 여기에 붙여넣으세요.
+
+예시:
+채널명: 퇴근후 한 시간
+타겟: 30대 직장인 남성
+콘셉트: 퇴근 후 작은 수익을 만드는 현실적인 방법들
+왜 시작하려는가: 저도 월급만으론 불안했고, 그 불안을 해결한 방법을 나누고 싶어서요..."></textarea>
+        <div class="char-count" id="charCount">0자</div>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">디렉터 추가 메모 (선택)</label>
+        <textarea class="txa" id="extraContext" style="min-height:70px"
+          placeholder="특별히 집중해서 봐야 할 포인트, 수강생 배경, 이전 피드백 내용 등을 적어주세요."></textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">피드백 스타일</label>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modeConv" onclick="setMode('conv')">
+            💬 구어체 대화형
+            <small>Personalmakers AI가 직접 말하듯</small>
+          </button>
+          <button class="mode-btn" id="modeStruct" onclick="setMode('struct')">
+            📋 구조화 피드백
+            <small>강점 / 디깅 포인트 / 다음 스텝</small>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mission-footer">
+      <button class="btn btn-ghost" onclick="clearForm()">초기화</button>
+      <button class="btn btn-primary" id="feedbackBtn" onclick="handleFeedback()" disabled>
+        Personalmakers AI 피드백 받기 →
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 피드백 출력 ── -->
+  <div class="feedback-panel">
+    <div class="feedback-header">
+      <div class="feedback-htitle">✍️ 피드백 결과</div>
+      <div class="feedback-hsub" id="fbSub">미션 내용을 입력하고 생성을 눌러주세요</div>
+    </div>
+
+    <div class="kb-warning" id="kbWarning">
+      ⚠️ 지식베이스가 비어있습니다. /knowledge/base.json에 문서를 추가해주세요.
+    </div>
+    <div class="err-box" id="errBox" style="display:none"></div>
+
+    <div class="feedback-body" id="feedbackBody">
+      <div class="fb-empty" id="fbEmpty">
+        <div class="icon">✍️</div>
+        <h3>피드백 대기 중</h3>
+        <p>왼쪽에 수강생 미션 내용을 입력하면 Personalmakers AI 관점으로 피드백을 생성합니다</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let knowledgeBase = null;
+let mode = 'conv';
+let isLoading = false;
+
+// ─── Load Knowledge Base ──────────────────────────────────────────────────────
+async function loadKnowledgeBase() {
+  try {
+    const res = await fetch('/knowledge/base.json');
+    const data = await res.json();
+    knowledgeBase = data;
+
+    const total = (data.documents || []).reduce((s, d) => s + (d.chunks || []).length, 0);
+    const docCount = (data.documents || []).length;
+
+    if (total === 0) {
+      document.getElementById('kbStatus').style.color = '#8a6a00';
+      document.getElementById('kbStatusTxt').textContent = '지식베이스 비어있음 — 관리자 설정 필요';
+      document.getElementById('kbWarning').style.display = 'block';
+    } else {
+      document.getElementById('kbStatusTxt').textContent = `지식베이스 준비 완료 · ${docCount}개 문서 · ${total}개 청크`;
+    }
+  } catch(e) {
+    document.getElementById('kbStatusTxt').textContent = '지식베이스 로드 실패';
+  }
+}
+
+// ─── Cosine Similarity ───────────────────────────────────────────────────────
+function cosineSim(a, b) {
+  let dot=0, na=0, nb=0;
+  for (let i=0; i<a.length; i++) { dot+=a[i]*b[i]; na+=a[i]*a[i]; nb+=b[i]*b[i]; }
+  return dot / (Math.sqrt(na)*Math.sqrt(nb)+1e-10);
+}
+
+// ─── Retrieve from KB ────────────────────────────────────────────────────────
+function retrieve(queryVec, topK=6) {
+  if (!knowledgeBase || !knowledgeBase.documents) return [];
+  const results = [];
+  for (const doc of knowledgeBase.documents) {
+    for (const chunk of (doc.chunks || [])) {
+      if (!chunk.embedding) continue;
+      results.push({
+        docName: doc.name,
+        docType: doc.type,
+        text: chunk.text,
+        score: cosineSim(queryVec, chunk.embedding),
+      });
+    }
+  }
+  return results.sort((a,b) => b.score - a.score).slice(0, topK);
+}
+
+// ─── Main Feedback Handler ────────────────────────────────────────────────────
+async function handleFeedback() {
+  const mission = document.getElementById('missionContent').value.trim();
+  if (!mission || isLoading) return;
+
+  isLoading = true;
+  document.getElementById('feedbackBtn').disabled = true;
+  setError('');
+  showLoading();
+
+  try {
+    const studentName = document.getElementById('studentName').value.trim();
+    const missionType = document.getElementById('missionType').value;
+    const extraContext = document.getElementById('extraContext').value.trim();
+
+    // 1. Embed query via backend
+    const embedRes = await fetch('/api/embed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts: [mission + ' ' + missionType], taskType: 'RETRIEVAL_QUERY' }),
+    });
+    const embedData = await embedRes.json();
+    if (embedData.error) throw new Error(embedData.error);
+    const queryVec = embedData.embeddings[0];
+
+    // 2. Retrieve relevant chunks
+    const hits = retrieve(queryVec, 6);
+
+    // 3. Get feedback from Claude via backend
+    const fbRes = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ missionContent: mission, missionType, studentName, extraContext, mode, hits }),
+    });
+    const fbData = await fbRes.json();
+    if (fbData.error) throw new Error(fbData.error);
+
+    showFeedback({
+      student: studentName || '수강생',
+      missionType,
+      answer: fbData.feedback,
+      mode,
+      sources: hits,
+      time: new Date().toLocaleString('ko-KR'),
+    });
+
+  } catch(e) {
+    setError(e.message);
+    hideLoading();
+  } finally {
+    isLoading = false;
+    document.getElementById('feedbackBtn').disabled = false;
+    checkBtn();
+  }
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function showLoading() {
+  document.getElementById('fbEmpty').style.display = 'none';
+  const body = document.getElementById('feedbackBody');
+  removeEl('fbLoading');
+  const div = document.createElement('div');
+  div.id = 'fbLoading'; div.className = 'fb-loading';
+  div.innerHTML = `
+    <div class="spinner"></div>
+    <div class="loading-label">피드백 생성 중...</div>
+    <div class="loading-steps">1. 미션 내용 분석<br>2. 관련 지식 검색<br>3. Personalmakers AI 관점 피드백 작성</div>
+  `;
+  body.insertBefore(div, body.firstChild);
+  document.getElementById('fbSub').textContent = '분석 중...';
+}
+
+function hideLoading() { removeEl('fbLoading'); }
+
+function showFeedback(record) {
+  hideLoading();
+  const body = document.getElementById('feedbackBody');
+  const isStruct = record.mode === 'struct';
+
+  const missionLabel = {
+    channel:'채널 기획', content:'콘텐츠 기획', script:'영상 대본',
+    thumbnail:'썸네일/제목', branding:'채널 브랜딩', review:'채널 리뷰', free:'자유 질문'
+  }[record.missionType] || record.missionType;
+
+  const card = document.createElement('div');
+  card.className = 'fb-card';
+  card.innerHTML = `
+    <div class="fb-meta">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="fb-badge ${isStruct?'struct':''}">${isStruct?'📋 구조화':'💬 구어체'}</span>
+        <span>${escHtml(record.student)} · ${missionLabel}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span>${record.time}</span>
+        <button class="copy-btn" onclick="copyFeedback(this)">복사</button>
+      </div>
+    </div>
+    <div class="fb-content">${escHtml(record.answer)}</div>
+    ${record.sources && record.sources.length > 0 ? `
+    <div class="fb-sources">
+      <div class="fb-src-label">📎 참고한 지식 (${record.sources.length}개)</div>
+      ${record.sources.map(s => `<span class="src-pill">${escHtml(s.docName)}</span>`).join('')}
+    </div>` : ''}
+  `;
+  body.insertBefore(card, body.firstChild);
+  document.getElementById('fbSub').textContent = `${record.student} · ${missionLabel} 피드백 완료`;
+}
+
+function copyFeedback(btn) {
+  const content = btn.closest('.fb-card').querySelector('.fb-content').textContent;
+  navigator.clipboard.writeText(content).then(() => {
+    btn.textContent = '✅ 복사됨';
+    setTimeout(() => btn.textContent = '복사', 1500);
+  });
+}
+
+function setError(msg) {
+  const box = document.getElementById('errBox');
+  if (msg) { box.textContent = '⚠️ ' + msg; box.style.display = 'block'; }
+  else { box.style.display = 'none'; }
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeConv').classList.toggle('active', m==='conv');
+  document.getElementById('modeStruct').classList.toggle('active', m==='struct');
+}
+
+function onMissionInput() {
+  const len = document.getElementById('missionContent').value.length;
+  document.getElementById('charCount').textContent = len.toLocaleString() + '자';
+  checkBtn();
+}
+
+function checkBtn() {
+  const mission = document.getElementById('missionContent').value.trim();
+  document.getElementById('feedbackBtn').disabled = !mission || isLoading;
+}
+
+function clearForm() {
+  document.getElementById('studentName').value = '';
+  document.getElementById('missionContent').value = '';
+  document.getElementById('extraContext').value = '';
+  document.getElementById('charCount').textContent = '0자';
+  checkBtn();
+}
+
+function removeEl(id) { const el = document.getElementById(id); if (el) el.remove(); }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadKnowledgeBase();
+
+// ─── Password Gate ────────────────────────────────────────────────────────────
+(function() {
+  const PW = '0730';
+  const KEY = 'pm_auth_v1';
+  // 이미 인증됐으면 바로 통과
+  if (sessionStorage.getItem(KEY) === 'ok') {
+    document.getElementById('pwGate').style.display = 'none';
+    return;
+  }
+  window.checkPW = function() {
+    const val = document.getElementById('pwInput').value;
+    if (val === PW) {
+      sessionStorage.setItem(KEY, 'ok');
+      const gate = document.getElementById('pwGate');
+      gate.style.opacity = '0';
+      gate.style.transition = 'opacity .3s';
+      setTimeout(() => gate.style.display = 'none', 300);
+    } else {
+      const inp = document.getElementById('pwInput');
+      const err = document.getElementById('pwErr');
+      inp.classList.add('shake', 'error');
+      err.textContent = '비밀번호가 맞지 않아요';
+      setTimeout(() => { inp.classList.remove('shake', 'error'); err.textContent = ''; inp.value = ''; }, 1200);
+    }
+  };
+})();
+</script>
+</body>
+</html>
