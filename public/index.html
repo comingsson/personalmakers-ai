@@ -9,19 +9,19 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f7f5f0;
-  --paper: #fdfcf9;
+  --bg: #f8fafc;
+  --paper: #f8fafc;
   --surface: #ffffff;
   --border: #e8e3d8;
   --border-dark: #d0c9b8;
   --ink: #1a1714;
   --ink-mid: #4a443c;
   --ink-light: #8a8178;
-  --accent: #c8622a;
-  --accent-soft: #f5ede5;
-  --accent-border: #e8c4a8;
-  --blue: #3d4a5c;
-  --blue-soft: #eef0f3;
+  --accent: #2563eb;
+  --accent-soft: #eff6ff;
+  --accent-border: #bfdbfe;
+  --blue: #1d4ed8;
+  --blue-soft: #eff6ff;
   --green: #2a7a4a;
   --green-soft: #e8f5ed;
   --r: 8px;
@@ -34,8 +34,8 @@
 body {
   background: var(--bg);
   background-image:
-    radial-gradient(circle at 15% 15%, rgba(200,98,42,.05) 0%, transparent 50%),
-    radial-gradient(circle at 85% 85%, rgba(200,98,42,.03) 0%, transparent 50%);
+    radial-gradient(circle at 15% 15%, rgba(37,99,235,.05) 0%, transparent 50%),
+    radial-gradient(circle at 85% 85%, rgba(37,99,235,.03) 0%, transparent 50%);
   color: var(--ink);
   font-family: var(--font);
   min-height: 100vh;
@@ -81,8 +81,10 @@ body {
 
 /* ─── Left: Mission Input ─── */
 .mission-panel {
-  display: flex; flex-direction: column; overflow: hidden;
+  display: flex; flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid var(--border);
+  height: 100%;
 }
 
 .mission-header {
@@ -116,7 +118,7 @@ input.inp, select.sel, textarea.txa {
   transition: border-color .15s, box-shadow .15s;
 }
 input.inp:focus, select.sel:focus, textarea.txa:focus {
-  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,98,42,.08);
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08);
 }
 input.inp::placeholder, textarea.txa::placeholder { color: var(--ink-light); }
 textarea.txa { resize: vertical; line-height: 1.7; }
@@ -128,7 +130,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   outline: none; resize: vertical; min-height: 160px;
   transition: border-color .15s, box-shadow .15s; width: 100%;
 }
-.mission-txa:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,98,42,.08); }
+.mission-txa:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
 .mission-txa::placeholder { color: var(--ink-light); }
 
 .char-count { font-size: 11px; color: var(--ink-light); font-family: var(--mono); text-align: right; margin-top: 3px; }
@@ -146,6 +148,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 .mission-footer {
   padding: 16px 32px; border-top: 1px solid var(--border);
   background: var(--surface); display: flex; gap: 10px; flex-shrink: 0;
+  position: sticky; bottom: 0; z-index: 10;
 }
 .btn {
   padding: 11px 20px; border: none; border-radius: var(--r);
@@ -153,7 +156,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   cursor: pointer; transition: all .15s;
 }
 .btn-primary { background: var(--accent); color: white; flex: 1; }
-.btn-primary:hover:not(:disabled) { background: #b8551f; box-shadow: 0 3px 10px rgba(200,98,42,.3); transform: translateY(-1px); }
+.btn-primary:hover:not(:disabled) { background: #1d4ed8; box-shadow: 0 3px 10px rgba(37,99,235,.25); transform: translateY(-1px); }
 .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--ink-mid); }
 .btn-ghost:hover { background: var(--bg); border-color: var(--border-dark); }
@@ -261,6 +264,17 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   display: none;
 }
 
+/* ─── History Buttons ─── */
+.feedback-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.hbtn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 11px; font-family: var(--font); font-weight: 600; cursor: pointer; color: var(--ink-mid); transition: all .15s; white-space:nowrap; }
+.hbtn:hover { border-color: var(--accent); color: var(--accent); }
+.hbtn-danger:hover { border-color: #c0392b; color: #c0392b; }
+
+/* ─── Mission Preview in Card ─── */
+.fb-mission { background: var(--bg); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; border-left: 3px solid var(--accent); }
+.fb-mission-label { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
+.fb-mission-text { font-size: 12px; color: var(--ink-mid); line-height: 1.6; white-space: pre-wrap; }
+
 /* ─── Password Gate ─── */
 #pwGate {
   position: fixed; inset: 0; z-index: 9999;
@@ -284,7 +298,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   letter-spacing: 6px; text-align: center; outline: none;
   transition: border-color .2s;
 }
-.pw-input:focus { border-color: #c8622a; }
+.pw-input:focus { border-color: #2563eb; }
 .pw-input.shake { animation: shake .4s ease; }
 .pw-input.error { border-color: #c0392b; color: #ff8099; }
 @keyframes shake {
@@ -296,11 +310,11 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 }
 .pw-btn {
   width: 100%; padding: 13px; border: none; border-radius: 10px;
-  background: #c8622a; color: white;
+  background: #2563eb; color: white;
   font-family: 'Pretendard', sans-serif; font-size: 15px; font-weight: 700;
   cursor: pointer; transition: all .2s; letter-spacing: -0.2px;
 }
-.pw-btn:hover { background: #b8551f; transform: translateY(-1px); }
+.pw-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
 .pw-err { font-size: 12px; color: #ff8099; font-family: 'JetBrains Mono', monospace; height: 16px; }
 </style>
 </head>
@@ -409,8 +423,16 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   <!-- ── 피드백 출력 ── -->
   <div class="feedback-panel">
     <div class="feedback-header">
-      <div class="feedback-htitle">✍️ 피드백 결과</div>
-      <div class="feedback-hsub" id="fbSub">미션 내용을 입력하고 생성을 눌러주세요</div>
+      <div>
+        <div class="feedback-htitle">✍️ 피드백 결과</div>
+        <div class="feedback-hsub" id="fbSub">미션 내용을 입력하고 생성을 눌러주세요</div>
+      </div>
+      <div style="display:flex;gap:6px" id="historyBtns">
+        <button class="hbtn" onclick="copyAllHistory()" title="전체 클립보드 복사">📋 복사</button>
+        <button class="hbtn" onclick="exportTxt()" title="텍스트 파일 저장">📄 TXT</button>
+        <button class="hbtn" onclick="exportPDF()" title="PDF 저장">🖨️ PDF</button>
+        <button class="hbtn hbtn-danger" onclick="clearHistory()" title="히스토리 삭제">🗑️</button>
+      </div>
     </div>
 
     <div class="kb-warning" id="kbWarning">
@@ -522,6 +544,7 @@ async function handleFeedback() {
     showFeedback({
       student: studentName || '수강생',
       missionType,
+      mission: mission,
       answer: fbData.feedback,
       mode,
       sources: hits,
@@ -556,8 +579,125 @@ function showLoading() {
 
 function hideLoading() { removeEl('fbLoading'); }
 
+// ─── History Storage ─────────────────────────────────────────────────────────
+const HIST_KEY = 'pm_history_v1';
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch { return []; }
+}
+function saveHistory(records) {
+  try { localStorage.setItem(HIST_KEY, JSON.stringify(records)); } catch {}
+}
+function addToHistory(record) {
+  const records = loadHistory();
+  records.unshift(record);
+  if (records.length > 100) records.pop(); // 최대 100개
+  saveHistory(records);
+  updateHistoryBtns();
+}
+function updateHistoryBtns() {
+  const records = loadHistory();
+  document.getElementById('historyBtns').style.display = records.length > 0 ? 'flex' : 'none';
+}
+function clearHistory() {
+  if (!confirm('저장된 모든 피드백 히스토리를 삭제할까요?')) return;
+  localStorage.removeItem(HIST_KEY);
+  document.getElementById('feedbackBody').innerHTML = `<div class="fb-empty" id="fbEmpty"><div class="icon">✍️</div><h3>피드백 대기 중</h3><p>왼쪽에 수강생 미션 내용을 입력하면 Personalmakers AI 관점으로 피드백을 생성합니다</p></div>`;
+  document.getElementById('fbSub').textContent = '미션 내용을 입력하고 생성을 눌러주세요';
+  updateHistoryBtns();
+}
+function exportTxt() {
+  const records = loadHistory();
+  if (!records.length) return;
+  const lines = records.map((r, i) => {
+    const missionLabel = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'}[r.missionType] || r.missionType;
+    return [
+      `${'='.repeat(60)}`,
+      `[${i+1}] ${r.student || '수강생'} · ${missionLabel} · ${r.time}`,
+      `${'='.repeat(60)}`,
+      ``,
+      `【질문 / 제출 내용】`,
+      r.mission || '(내용 없음)',
+      ``,
+      `【Personalmakers AI 피드백】`,
+      r.answer,
+      ``,
+    ].join('
+');
+  });
+  const blob = new Blob([lines.join('
+')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `피드백_히스토리_${new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','')}.txt`;
+  a.click();
+}
+
+function copyAllHistory() {
+  const records = loadHistory();
+  if (!records.length) return;
+  const missionLabel = r => ({channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'}[r.missionType] || r.missionType);
+  const text = records.map((r, i) => [
+    `[${i+1}] ${r.student || '수강생'} · ${missionLabel(r)} · ${r.time}`,
+    ``,
+    `【질문 / 제출 내용】`,
+    r.mission || '(내용 없음)',
+    ``,
+    `【Personalmakers AI 피드백】`,
+    r.answer,
+    `${'─'.repeat(40)}`,
+  ].join('
+')).join('
+
+');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyAllHistory()"]');
+    btn.textContent = '✅ 복사됨'; setTimeout(() => btn.textContent = '📋 복사', 1500);
+  });
+}
+
+function exportPDF() {
+  const records = loadHistory();
+  if (!records.length) return;
+  const missionLabel = r => ({channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'}[r.missionType] || r.missionType);
+
+  const win = window.open('', '_blank');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>피드백 히스토리</title>
+  <style>
+    body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 32px; color: #1a1714; font-size: 13px; line-height: 1.8; }
+    h1 { font-size: 20px; color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 28px; }
+    .card { margin-bottom: 36px; page-break-inside: avoid; border: 1px solid #e8e3d8; border-radius: 8px; overflow: hidden; }
+    .card-header { background: #f7f5f0; padding: 10px 16px; font-size: 11px; color: #8a8178; display: flex; justify-content: space-between; border-bottom: 1px solid #e8e3d8; }
+    .card-header strong { color: #1a1714; font-size: 13px; }
+    .mission { background: #f0f7ff; border-left: 3px solid #2563eb; padding: 10px 14px; margin: 14px 16px 0; border-radius: 4px; font-size: 12px; color: #4a443c; white-space: pre-wrap; }
+    .mission-label { font-size: 10px; font-weight: 700; color: #2563eb; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
+    .feedback { padding: 14px 16px; white-space: pre-wrap; font-size: 13px; }
+    .num { display: inline-block; background: #2563eb; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+    @media print { body { padding: 20px; } }
+  </style></head><body>
+  <h1>✍️ Personalmakers AI 피드백 히스토리</h1>
+  <p style="color:#8a8178;font-size:11px;margin-bottom:28px">내보낸 날짜: ${new Date().toLocaleString('ko-KR')} · 총 ${records.length}건</p>
+  ${records.map((r, i) => `
+  <div class="card">
+    <div class="card-header">
+      <div><span class="num">${i+1}</span><strong>${r.student || '수강생'}</strong> · ${missionLabel(r)}</div>
+      <div>${r.time}</div>
+    </div>
+    ${r.mission ? `<div class="mission"><div class="mission-label">📝 제출 내용</div>${r.mission.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+    <div class="feedback">${r.answer.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>
+  </div>`).join('')}
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`;
+  win.document.write(html);
+  win.document.close();
+}
+
 function showFeedback(record) {
   hideLoading();
+
+  // localStorage에 저장
+  addToHistory(record);
+
   const body = document.getElementById('feedbackBody');
   const isStruct = record.mode === 'struct';
 
@@ -579,6 +719,11 @@ function showFeedback(record) {
         <button class="copy-btn" onclick="copyFeedback(this)">복사</button>
       </div>
     </div>
+    ${record.mission ? `
+    <div class="fb-mission">
+      <div class="fb-mission-label">📝 제출 내용</div>
+      <div class="fb-mission-text">${escHtml(record.mission)}</div>
+    </div>` : ''}
     <div class="fb-content">${escHtml(record.answer)}</div>
     ${record.sources && record.sources.length > 0 ? `
     <div class="fb-sources">
@@ -634,6 +779,8 @@ function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 loadKnowledgeBase();
+// 저장된 히스토리 있으면 버튼 표시
+setTimeout(updateHistoryBtns, 100);
 
 // ─── Password Gate ────────────────────────────────────────────────────────────
 (function() {
