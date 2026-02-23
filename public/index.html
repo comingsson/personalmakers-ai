@@ -452,6 +452,34 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 </div>
 
 <script>
+// ─── Password Gate (최우선 실행) ─────────────────────────────────────────────
+(function() {
+  const PW = '0730';
+  const KEY = 'pm_auth_v1';
+  if (sessionStorage.getItem(KEY) === 'ok') {
+    document.addEventListener('DOMContentLoaded', function() {
+      var gate = document.getElementById('pwGate');
+      if (gate) gate.style.display = 'none';
+    });
+  }
+  window.checkPW = function() {
+    var val = document.getElementById('pwInput').value;
+    if (val === PW) {
+      sessionStorage.setItem(KEY, 'ok');
+      var gate = document.getElementById('pwGate');
+      gate.style.opacity = '0';
+      gate.style.transition = 'opacity .3s';
+      setTimeout(function() { gate.style.display = 'none'; }, 300);
+    } else {
+      var inp = document.getElementById('pwInput');
+      var err = document.getElementById('pwErr');
+      inp.classList.add('shake', 'error');
+      err.textContent = '비밀번호가 맞지 않아요';
+      setTimeout(function() { inp.classList.remove('shake', 'error'); err.textContent = ''; inp.value = ''; }, 1200);
+    }
+  };
+})();
+
 // ─── State ───────────────────────────────────────────────────────────────────
 let knowledgeBase = null;
 let mode = 'conv';
@@ -782,32 +810,7 @@ loadKnowledgeBase();
 // 저장된 히스토리 있으면 버튼 표시
 setTimeout(updateHistoryBtns, 100);
 
-// ─── Password Gate ────────────────────────────────────────────────────────────
-(function() {
-  const PW = '0730';
-  const KEY = 'pm_auth_v1';
-  // 이미 인증됐으면 바로 통과
-  if (sessionStorage.getItem(KEY) === 'ok') {
-    document.getElementById('pwGate').style.display = 'none';
-    return;
-  }
-  window.checkPW = function() {
-    const val = document.getElementById('pwInput').value;
-    if (val === PW) {
-      sessionStorage.setItem(KEY, 'ok');
-      const gate = document.getElementById('pwGate');
-      gate.style.opacity = '0';
-      gate.style.transition = 'opacity .3s';
-      setTimeout(() => gate.style.display = 'none', 300);
-    } else {
-      const inp = document.getElementById('pwInput');
-      const err = document.getElementById('pwErr');
-      inp.classList.add('shake', 'error');
-      err.textContent = '비밀번호가 맞지 않아요';
-      setTimeout(() => { inp.classList.remove('shake', 'error'); err.textContent = ''; inp.value = ''; }, 1200);
-    }
-  };
-})();
+
 </script>
 </body>
 </html>
