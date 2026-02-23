@@ -514,7 +514,7 @@ async function handleFeedback() {
     const fbRes = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ missionContent: mission, missionType, studentName, extraContext, mode, hits }),
+      body: JSON.stringify({ question: mission, category: missionType, studentName, extraContext, mode, hits }),
     });
     const fbData = await fbRes.json();
     if (fbData.error) throw new Error(fbData.error);
