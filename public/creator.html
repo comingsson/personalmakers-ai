@@ -228,13 +228,20 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); min-h
 <script>
 (function() {
   if (sessionStorage.getItem("creator_auth") === "ok") {
-    document.addEventListener("DOMContentLoaded", () => { document.getElementById("pwOverlay").style.display = "none"; });
+    var ov = document.getElementById("pwOverlay");
+    if (ov) ov.style.display = "none";
   }
 })();
 function checkPW() {
-  const val = document.getElementById("pwInput").value;
-  if (val === "0730") { sessionStorage.setItem("creator_auth","ok"); document.getElementById("pwOverlay").style.display = "none"; }
-  else { document.getElementById("pwErr").textContent = "비밀번호가 틀렸어요"; document.getElementById("pwInput").value = ""; }
+  var val = document.getElementById("pwInput").value;
+  if (val === "0730") {
+    sessionStorage.setItem("creator_auth", "ok");
+    document.getElementById("pwOverlay").style.display = "none";
+  } else {
+    document.getElementById("pwErr").textContent = "비밀번호가 틀렸어요";
+    document.getElementById("pwInput").value = "";
+    setTimeout(function(){ document.getElementById("pwErr").textContent = ""; }, 1200);
+  }
 }
 
 let inputMode="keyword", contentType="mid", isLoading=false, resultText="";
@@ -280,7 +287,44 @@ const CHANNEL_DATA=`[커밍쏜 채널 데이터]
 쇼츠 290개, 미드폼 166개
 미드폼 TOP5: 163만뷰(러닝50일), 98만뷰(중소기업퇴사), 82만뷰(구글임원퇴사), 73만뷰(유튜브540일), 70만뷰(퇴사전11가지)
 쇼츠 TOP5: 320만뷰(대기업연봉공개), 211만뷰(신입연봉BMW), 190만뷰(퇴직금공개), 140만뷰(퇴사하세요), 117만뷰(퇴사후현실)
-최적길이:8~15분 / 터지는패턴:숫자+반전+타겟+현실 / 잘되는소재:퇴사/연봉/유튜브현실/도전변화`;
+최적길이:8~15분 / 터지는패턴:숫자+반전+타겟+현실 / 잘되는소재:퇴사/연봉/유튜브현실/도전변화
+
+[고조회수 대본 구조 패턴 분석 - 인터뷰 제외]
+
+■ 패턴 1: 도전/변화 실험형 (대표: 러닝50일 163만뷰)
+- 훅: "나는 ~을 해봤다" 선언 + 결과 스포 (궁금증 유발)
+- 배경: 왜 이걸 시작했는지 결핍/동기 (30초 이내)
+- 본론: 날짜/단계별 변화 나열 (숫자로 구체화)
+- 반전: 예상과 달랐던 것, 힘들었던 순간
+- 결론: 실제로 어떻게 변했는지 + 한 줄 교훈
+- 마무리: 다음 도전 예고 or 시청자에게 질문
+
+■ 패턴 2: 현실 폭로/고백형 (대표: 유튜브540일 73만뷰, 퇴사전11가지 70만뷰)
+- 훅: "사람들이 모르는 것" or "내가 직접 겪어보니" 선언
+- 공감: 많은 사람들이 기대하는 것 (나도 그랬어 포인트)
+- 반전: 실제로는 이랬다 (충격/실망/의외)
+- 구체화: 리스트 형식으로 현실 나열 (5가지, 11가지 등)
+- 감정: 그 상황에서 내가 느낀 감정 솔직하게
+- 결론: 그래서 내가 얻은 것/배운 것
+
+■ 패턴 3: 퇴사/전환점 스토리형 (대표: 중소기업퇴사 98만뷰)
+- 훅: 극단적 상황 묘사로 시작 (감정 최고조)
+- 배경: 그 회사/상황에 들어가게 된 이유
+- 갈등: 버텼던 이유, 참았던 순간들
+- 결정적 순간: 더 이상 못 버티게 된 한 장면
+- 결단: 퇴사 결정 과정
+- 이후: 퇴사 후 현실, 후회 or 잘했다
+
+■ 공통 훅 공식:
+"[구체적 숫자/기간] + [행동] + [예상 밖 결과]"
+예: "50일 동안 매일 뛰었더니 생긴 변화", "540일 유튜브 올인했더니 남은 것"
+
+■ 공통 구조 원칙:
+- 첫 15초: 결과 or 충격적 장면 먼저 → 이유는 나중에
+- 감정선: 기대→현실→반전→교훈 순서
+- 숫자 필수: 기간/금액/횟수로 구체화
+- 나만의 경험: 일반론 X, 내가 직접 겪은 것만
+- 마지막: 시청자가 행동할 수 있는 한 문장으로 마무리`;
 
 let knowledgeBase=null;
 async function loadKnowledgeBase() {
