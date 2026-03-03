@@ -89,7 +89,7 @@ body {
   height: 100%;
 }
 
-/* ─── Mission Footer (버튼 고정 영역) ─── */
+/* ─── Mission Footer ─── */
 .app-footer { display: none; }
 
 .mission-footer {
@@ -394,13 +394,9 @@ textarea.txa { resize: vertical; line-height: 1.7; }
         <div class="field-group">
           <label class="lbl">미션 유형</label>
           <select class="sel" id="missionType">
-            <option value="channel">채널 기획 / 콘셉트</option>
-            <option value="content">콘텐츠 아이디어 / 기획</option>
-            <option value="script">영상 대본</option>
-            <option value="thumbnail">썸네일 / 제목</option>
-            <option value="branding">채널 브랜딩 전략</option>
-            <option value="review">채널 운영 현황 리뷰</option>
-            <option value="free">자유 질문 / 기타</option>
+            <option value="channel">채널 기획</option>
+            <option value="content">콘텐츠 기획</option>
+            <option value="free">자유 질문</option>
           </select>
         </div>
       </div>
@@ -440,7 +436,6 @@ textarea.txa { resize: vertical; line-height: 1.7; }
       </div>
     </div>
 
-    <!-- 버튼 고정 영역 -->
     <div class="mission-footer">
       <button class="btn btn-ghost" onclick="clearForm()">초기화</button>
       <button class="btn btn-primary" id="feedbackBtn" onclick="handleFeedback()" disabled>
@@ -515,7 +510,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 let mode = 'conv';
 let isLoading = false;
 
-// ─── Load Knowledge Base Status (서버사이드) ─────────────────────────────────
+// ─── Load Knowledge Base ──────────────────────────────────────────────────────
 async function loadKnowledgeBase() {
   try {
     const res = await fetch('/api/feedback');
@@ -549,7 +544,6 @@ async function handleFeedback() {
     const missionType = document.getElementById('missionType').value;
     const extraContext = document.getElementById('extraContext').value.trim();
 
-    // 서버에 question만 보내면 서버가 RAG까지 처리
     const fbRes = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -647,7 +641,7 @@ function exportTxt() {
 function copyAllHistory() {
   const records = loadHistory();
   if (!records.length) return;
-  const ML = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'};
+  const ML = {channel:'채널 기획',content:'콘텐츠 기획',free:'자유 질문'};
   const text = records.map((r, i) => {
     const label = ML[r.missionType] || r.missionType;
     return '[' + (i+1) + '] ' + (r.student||'수강생') + ' · ' + label + ' · ' + r.time + '\n\n' +
@@ -663,7 +657,7 @@ function copyAllHistory() {
 function exportPDF() {
   const records = loadHistory();
   if (!records.length) return;
-  const ML = {channel:'채널 기획',content:'콘텐츠 기획',script:'영상 대본',thumbnail:'썸네일/제목',branding:'채널 브랜딩',review:'채널 리뷰',free:'자유 질문'};
+  const ML = {channel:'채널 기획',content:'콘텐츠 기획',free:'자유 질문'};
   const win = window.open('', '_blank');
   const cards = records.map((r, i) => {
     const label = ML[r.missionType] || r.missionType;
@@ -685,8 +679,7 @@ function showFeedback(record) {
   const isStruct = record.mode === 'struct';
 
   const missionLabel = {
-    channel:'채널 기획', content:'콘텐츠 기획', script:'영상 대본',
-    thumbnail:'썸네일/제목', branding:'채널 브랜딩', review:'채널 리뷰', free:'자유 질문'
+    channel:'채널 기획', content:'콘텐츠 기획', free:'자유 질문'
   }[record.missionType] || record.missionType;
 
   const card = document.createElement('div');
