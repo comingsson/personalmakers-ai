@@ -37,7 +37,7 @@ function retrieve(kb, queryVec, topK = 6) {
 
 // ─── Gemini Embed ────────────────────────────────────────────────────────────
 async function embedText(text, geminiKey) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${geminiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
