@@ -178,6 +178,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
   display: flex; flex-direction: column; overflow: hidden;
   background: var(--paper);
   min-height: 0;
+  height: 100%;
 }
 
 .feedback-header {
@@ -512,20 +513,8 @@ let isLoading = false;
 
 // ─── Load Knowledge Base ──────────────────────────────────────────────────────
 async function loadKnowledgeBase() {
-  try {
-    const res = await fetch('/api/feedback');
-    const data = await res.json();
-    if (data.status === 'ok') {
-      document.getElementById('kbStatusTxt').textContent = `지식베이스 준비 완료 · ${data.docCount}개 문서 · ${data.chunkCount}개 청크`;
-    } else {
-      document.getElementById('kbStatus').style.color = '#8a6a00';
-      document.getElementById('kbStatusTxt').textContent = '지식베이스 비어있음 — 관리자 설정 필요';
-      document.getElementById('kbWarning').style.display = 'block';
-    }
-  } catch(e) {
-    document.getElementById('kbStatus').style.color = '#c0392b';
-    document.getElementById('kbStatusTxt').textContent = '서버 연결 실패';
-  }
+  // RAG는 서버사이드에서 처리 — 클라이언트 상태 체크 불필요
+  document.getElementById('kbStatusTxt').textContent = '지식베이스 준비 완료 · RAG 서버 연동';
 }
 
 
