@@ -75,9 +75,8 @@ body {
   display: grid;
   grid-template-columns: 1fr 420px;
   gap: 0;
-  flex: 1;
+  height: calc(100vh - 56px);
   overflow: hidden;
-  min-height: 0;
 }
 
 /* ─── Left: Mission Input ─── */
@@ -177,8 +176,7 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 .feedback-panel {
   display: flex; flex-direction: column; overflow: hidden;
   background: var(--paper);
-  min-height: 0;
-  flex: 1;
+  height: 100%;
 }
 
 .feedback-header {
@@ -189,9 +187,10 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 .feedback-hsub { font-size: 11px; color: var(--ink-light); font-family: var(--mono); margin-top: 2px; }
 
 .feedback-body {
-  flex: 1; overflow-y: auto; padding: 20px;
+  overflow-y: scroll;
+  padding: 20px;
   display: flex; flex-direction: column; gap: 0;
-  min-height: 0;
+  height: calc(100vh - 56px - 48px);
 }
 .feedback-body::-webkit-scrollbar { width: 3px; }
 .feedback-body::-webkit-scrollbar-thumb { background: var(--border-dark); }
