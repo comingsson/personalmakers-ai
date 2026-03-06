@@ -1,10 +1,7 @@
 {
   "functions": {
-    "api/embed.js": {
-      "maxDuration": 30
-    },
-    "api/feedback.js": {
-      "maxDuration": 30
-    }
+    "api/embed.js": { "maxDuration": 30 },
+    "api/feedback.js": { "maxDuration": 30 },
+    "api/ocr.js": { "maxDuration": 60 }
   }
 }
