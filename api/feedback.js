@@ -48,6 +48,112 @@ async function embedText(text, geminiKey) {
   return data.embedding.values;
 }
 
+// ─── Notion 가이드라인 로드 (캐시 포함) ─────────────────────────────────────────
+let _guidelinesCache = null;
+let _guidelinesCacheTime = 0;
+const GUIDELINES_TTL = 5 * 60 * 1000; // 5분
+
+async function loadGuidelinesFromNotion(notionKey) {
+  const now = Date.now();
+  if (_guidelinesCache && (now - _guidelinesCacheTime) < GUIDELINES_TTL) {
+    return _guidelinesCache;
+  }
+
+  try {
+    const NOTION_DB_ID = process.env.NOTION_DB_ID || 'f1bf4e3893b445eda779d32ec464d4e8';
+
+    // 1단계: DB 쿼리 — 활성화된 항목만, 순서대로
+    const queryRes = await fetch(`https://api.notion.so/v1/databases/${NOTION_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: { property: '활성', checkbox: { equals: true } },
+        sorts: [{ property: '순서', direction: 'ascending' }]
+      })
+    });
+
+    if (!queryRes.ok) throw new Error(`Notion DB 쿼리 실패: ${queryRes.status}`);
+    const queryData = await queryRes.json();
+
+    // 2단계: 모든 페이지의 블록 콘텐츠를 병렬로 가져오기
+    const pagesWithContent = await Promise.all(
+      queryData.results.map(async (page) => {
+        const blocksRes = await fetch(`https://api.notion.so/v1/blocks/${page.id}/children?page_size=100`, {
+          headers: {
+            'Authorization': `Bearer ${notionKey}`,
+            'Notion-Version': '2022-06-28'
+          }
+        });
+        if (!blocksRes.ok) return { page, blocks: [] };
+        const blocksData = await blocksRes.json();
+        return { page, blocks: blocksData.results || [] };
+      })
+    );
+
+    // 3단계: guidelines 형식으로 파싱
+    const g = {};
+    for (const { page, blocks } of pagesWithContent) {
+      const props = page.properties;
+      const section = props['섹션']?.select?.name || '';
+      const category = props['카테고리']?.select?.name || '';
+      const name = props['이름']?.title?.[0]?.plain_text || '';
+
+      // 블록에서 텍스트 추출
+      const textItems = blocks.map(block => {
+        const content = block[block.type];
+        if (!content?.rich_text) return '';
+        return content.rich_text.map(t => t.plain_text).join('');
+      }).filter(Boolean);
+
+      switch (section) {
+        case 'persona':
+          g.persona = textItems.join('\n\n');
+          break;
+        case 'philosophy':
+          g.corePhilosophy = textItems;
+          break;
+        case 'tone':
+          g.toneGuide = textItems.join('\n');
+          break;
+        case 'category':
+          if (!g.categoryGuidelines) g.categoryGuidelines = {};
+          g.categoryGuidelines[category] = { name, rules: textItems };
+          break;
+        case 'freeGuide':
+          g.freeGuidelines = textItems.join('\n');
+          break;
+        case 'doNotDo':
+          g.doNotDo = textItems;
+          break;
+      }
+    }
+
+    _guidelinesCache = g;
+    _guidelinesCacheTime = now;
+    console.log('Notion 가이드라인 로드 완료:', Object.keys(g).join(', '));
+    return g;
+  } catch (e) {
+    console.warn('Notion 가이드라인 로드 실패:', e.message);
+    if (_guidelinesCache) return _guidelinesCache; // 캐시된 데이터라도 반환
+    return null;
+  }
+}
+
+// 로컬 파일 폴백
+function loadGuidelinesFromFile() {
+  try {
+    const gPath = path.join(process.cwd(), 'knowledge', 'guidelines.json');
+    return JSON.parse(fs.readFileSync(gPath, 'utf-8'));
+  } catch(e) {
+    console.warn('guidelines.json 로드 실패');
+    return {};
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -126,7 +232,7 @@ ${outputList.includes('썸네일 아이디어') ? `## 🖼 썸네일 아이디�
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, system: creatorSystem, messages: [{ role: 'user', content: creatorPrompt }] }),
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4000, system: creatorSystem, messages: [{ role: 'user', content: creatorPrompt }] }),
       });
       const data = await response.json();
       if (data.error) throw new Error('Claude: ' + data.error.message);
@@ -137,18 +243,23 @@ ${outputList.includes('썸네일 아이디어') ? `## 🖼 썸네일 아이디�
   }
 
   // ── 피드백 모드 ───────────────────────────────────────────────────────────────
+  const NOTION_KEY = process.env.NOTION_API_KEY;
   let g = {};
-  try {
-    const gPath = path.join(process.cwd(), 'knowledge', 'guidelines.json');
-    g = JSON.parse(fs.readFileSync(gPath, 'utf-8'));
-  } catch(e) { console.warn('guidelines.json 로드 실패'); }
+
+  // Notion에서 가이드라인 로드 (실패 시 로컬 파일 폴백)
+  if (NOTION_KEY) {
+    g = await loadGuidelinesFromNotion(NOTION_KEY) || {};
+  }
+  if (!g.persona) {
+    g = loadGuidelinesFromFile();
+  }
 
   const corePhilosophy = (g.corePhilosophy || [
     '유튜브는 SNS가 아니라 비즈니스다. 채널은 브랜드고, 콘텐츠는 상품이다.',
     '나만의 라이프스타일을 콘텐츠에 전달하고, 이에 공감하는 사람들을 모아야 한다.',
     '감정을 남기는 콘텐츠를 만들어야 한다. 정보는 잊혀지지만 감정은 남는다.',
     '정보는 복제되지만, 서사는 절대 복제되지 않는다. 나만의 서사를 만들어야 한다.',
-    '브랜딩은 더 덜어낼 수 없는 상태까지 걷어내야 완성된다.',
+    '브랜딩은 더 덜어낼 수 없는 상태까지 걸어내야 완성된다.',
   ]).map((p, i) => `${i+1}. ${p}`).join('\n');
 
   const toneGuide = g.toneGuide || '직접적이고 핵심을 먼저 말합니다. 칭찬보다 구체적인 방향 제시를 우선합니다.';
@@ -194,7 +305,7 @@ ${isPublic
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: userPrompt }] }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4000, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: userPrompt }] }),
     });
     const data = await response.json();
     if (data.error) throw new Error('Claude: ' + data.error.message);
