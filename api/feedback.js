@@ -10,7 +10,7 @@ function loadKB() {
     _kbCache = JSON.parse(fs.readFileSync(p, 'utf-8'));
     return _kbCache;
   } catch(e) {
-    console.warn('base.json 로드 실패:', e.message);
+    console.warn('base.json 로드 실패:', e.mesage);
     return null;
   }
 }
@@ -137,7 +137,8 @@ async function loadGuidelinesFromNotion(notionKey) {
     console.log('Notion 가이드라인 로드 완료:', Object.keys(g).join(', '));
     return g;
   } catch (e) {
-    console.warn('Notion 가이드라인 로드 실패:', e.message);
+    const cause = e.cause ? ` | cause: ${e.cause.message || JSON.stringify(e.cause)}` : '';
+    console.warn('Notion guidelines load failed:', e.message + cause);
     if (_guidelinesCache) return _guidelinesCache; // 캐시된 데이터라도 반환
     return null;
   }
@@ -243,7 +244,7 @@ ${outputList.includes('썸네일 아이디어') ? `## 🖼 썸네일 아이디�
   }
 
   // ── 피드백 모드 ───────────────────────────────────────────────────────────────
-  const NOTION_KEY = process.env.NOTION_API_KEY;
+  const NOTION_KEY = (process.env.NOTION_API_KEY || '').trim();
   let g = {};
 
   // Notion에서 가이드라인 로드 (실패 시 로컬 파일 폴백)
