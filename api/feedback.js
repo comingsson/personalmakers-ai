@@ -63,7 +63,7 @@ async function loadGuidelinesFromNotion(notionKey) {
     const NOTION_DB_ID = process.env.NOTION_DB_ID || 'f1bf4e3893b445eda779d32ec464d4e8';
 
     // 1단계: DB 쿼리 — 활성화된 항목만, 순서대로
-    const queryRes = await fetch(`https://api.notion.so/v1/databases/${NOTION_DB_ID}/query`, {
+    const queryRes = await fetch(`https://api.notion.com/v1/databases/${NOTION_DB_ID}/query`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionKey}`,
@@ -82,7 +82,7 @@ async function loadGuidelinesFromNotion(notionKey) {
     // 2단계: 모든 페이지의 블록 콘텐츠를 병렬로 가져오기
     const pagesWithContent = await Promise.all(
       queryData.results.map(async (page) => {
-        const blocksRes = await fetch(`https://api.notion.so/v1/blocks/${page.id}/children?page_size=100`, {
+        const blocksRes = await fetch(`https://api.notion.com/v1/blocks/${page.id}/children?page_size=100`, {
           headers: {
             'Authorization': `Bearer ${notionKey}`,
             'Notion-Version': '2022-06-28'
