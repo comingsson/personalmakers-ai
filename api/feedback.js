@@ -155,6 +155,65 @@ async function loadGuidelinesFromNotion(notionKey) {
   }
 }
 
+// ─── 플레이북(Q&A) 캐시 ─────────────────────────────────────────────────────
+let _playbookCache = null;
+let _playbookCacheTime = 0;
+const PLAYBOOK_TTL = 5 * 60 * 1000;
+
+async function loadPlaybookFromNotion(notionKey) {
+  notionKey = (notionKey || '').trim();
+  const now = Date.now();
+  if (_playbookCache && (now - _playbookCacheTime) < PLAYBOOK_TTL) return _playbookCache;
+  try {
+    const PLAYBOOK_DB_ID = (process.env.PLAYBOOK_DB_ID || '3b9818e3e2c94735b9f1d1c75bf73ff2').trim();
+    const queryRes = await fetch(`https://api.notion.com/v1/databases/${PLAYBOOK_DB_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: { property: '상태', select: { equals: '승인' } },
+        page_size: 100
+      })
+    });
+    if (!queryRes.ok) throw new Error(`플레이북 DB 쿼리 실패: ${queryRes.status}`);
+    const queryData = await queryRes.json();
+
+    const items = await Promise.all(
+      (queryData.results || []).map(async (page) => {
+        const q = page.properties?.['질문']?.title?.map(t => t.plain_text).join('') || '';
+        const category = page.properties?.['카테고리']?.select?.name || '';
+        let answer = '';
+        const blocksRes = await fetch(`https://api.notion.com/v1/blocks/${page.id}/children?page_size=100`, {
+          headers: { 'Authorization': `Bearer ${notionKey}`, 'Notion-Version': '2022-06-28' }
+        });
+        if (blocksRes.ok) {
+          const blocksData = await blocksRes.json();
+          answer = (blocksData.results || [])
+            .filter(block => !block.type.startsWith('heading'))
+            .map(block => {
+              const content = block[block.type];
+              if (!content?.rich_text) return '';
+              return content.rich_text.map(t => t.plain_text).join('');
+            })
+            .filter(Boolean).join('\n');
+        }
+        return { q, category, answer };
+      })
+    );
+
+    _playbookCache = items.filter(i => i.q && i.answer);
+    _playbookCacheTime = now;
+    console.log('플레이북 로드 완료:', _playbookCache.length + '건');
+    return _playbookCache;
+  } catch (e) {
+    console.warn('플레이북 로드 실패:', e.message);
+    return _playbookCache || [];
+  }
+}
+
 // 로컬 파일 폴백
 function loadGuidelinesFromFile() {
   try {
@@ -178,7 +237,11 @@ export default async function handler(req, res) {
     if (!kb) return res.status(200).json({ status: 'error', message: '지식베이스 로드 실패' });
     const total = (kb.documents || []).reduce((s, d) => s + (d.chunks || []).length, 0);
     const docCount = (kb.documents || []).length;
-    return res.status(200).json({ status: 'ok', docCount, chunkCount: total });
+    let playbookCount = 0;
+    if (process.env.NOTION_API_KEY) {
+      playbookCount = (await loadPlaybookFromNotion(process.env.NOTION_API_KEY)).length;
+    }
+    return res.status(200).json({ status: 'ok', docCount, chunkCount: total, playbookCount });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -266,6 +329,12 @@ ${outputList.includes('썸네일 아이디어') ? `## 🖼 썸네일 아이디�
     g = loadGuidelinesFromFile();
   }
 
+  // 플레이북(승인된 Q&A) 로드
+  let playbook = [];
+  if (NOTION_KEY) {
+    playbook = await loadPlaybookFromNotion(NOTION_KEY);
+  }
+
   const corePhilosophy = (g.corePhilosophy || [
     '유튜브는 SNS가 아니라 비즈니스다. 채널은 브랜드고, 콘텐츠는 상품이다.',
     '나만의 라이프스타일을 콘텐츠에 전달하고, 이에 공감하는 사람들을 모아야 한다.',
@@ -282,13 +351,18 @@ ${outputList.includes('썸네일 아이디어') ? `## 🖼 썸네일 아이디�
   const freeGuidelines = g.freeGuidelines ? `\n[추가 지침]\n${g.freeGuidelines}` : '';
   const personaBase = g.persona || '당신은 커밍쏜입니다. 유튜브 채널 성장과 콘텐츠 브랜딩 전문가입니다.';
 
+  const playbookStr = playbook.length > 0
+    ? '\n\n[팀 퍼메스 Q&A 플레이북]\n아래는 승인된 공식 Q&A입니다. 유사한 질문에는 이 답변의 내용과 기조를 우선 반영하세요.\n' +
+      playbook.map((p, i) => `Q${i+1}. [${p.category}] ${p.q}\nA${i+1}. ${p.answer}`).join('\n\n')
+    : '';
+
   const SYSTEM_PROMPT = `${personaBase}
 
 [핵심 철학]
 ${corePhilosophy}
 
 [말투와 스타일]
-${toneGuide}${categoryRules}${freeGuidelines}${doNotDo}
+${toneGuide}${categoryRules}${freeGuidelines}${doNotDo}${playbookStr}
 
 당신의 과거 콘텐츠, 강의, 컨설팅 자료를 참고하여 답변하세요.
 ${isPublic
