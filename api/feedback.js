@@ -7,10 +7,21 @@ function loadKB() {
   if (_kbCache) return _kbCache;
   try {
     const p = path.join(process.cwd(), 'knowledge', 'base.json');
-    _kbCache = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    const kb = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    try {
+      const p2 = path.join(process.cwd(), 'knowledge', 'base2.json');
+      const kb2 = JSON.parse(fs.readFileSync(p2, 'utf-8'));
+      if (kb2 && kb2.documents) {
+        kb.documents = (kb.documents || []).concat(kb2.documents);
+        kb.totalChunks = (kb.totalChunks || 0) + (kb2.totalChunks || 0);
+      }
+    } catch(e2) {
+      console.warn('base2.json 로드 실패(무시):', e2.message);
+    }
+    _kbCache = kb;
     return _kbCache;
   } catch(e) {
-    console.warn('base.json 로드 실패:', e.mesage);
+    console.warn('base.json 로드 실패:', e.message);
     return null;
   }
 }
