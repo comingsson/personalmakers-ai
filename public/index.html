@@ -610,21 +610,70 @@ async function handleFeedback() {
     const fbRes = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: mission, category: missionType, studentName, extraContext, mode }),
+      body: JSON.stringify({ question: mission, category: missionType, studentName, extraContext, mode, stream: true }),
     });
-    const fbData = await fbRes.json();
-    if (fbData.error) throw new Error(fbData.error);
 
-    showFeedback({
+    const ctype = fbRes.headers.get('content-type') || '';
+    if (!fbRes.ok || ctype.indexOf('text/event-stream') === -1) {
+      const fbData = await fbRes.json();
+      if (fbData.error) throw new Error(fbData.error);
+      showFeedback({
+        student: studentName || '수강생',
+        missionType,
+        mission: mission,
+        answer: fbData.feedback,
+        mode,
+        sources: fbData.sources || [],
+        time: new Date().toLocaleString('ko-KR'),
+      });
+      return;
+    }
+
+    // 스트리밍: 카드를 먼저 띄우고 텍스트를 실시간으로 채움
+    hideLoading();
+    const record = {
       student: studentName || '수강생',
       missionType,
       mission: mission,
-      answer: fbData.feedback,
+      answer: '',
       mode,
-      sources: fbData.sources || [],
+      sources: [],
       time: new Date().toLocaleString('ko-KR'),
-    });
+    };
+    const card = renderFeedbackCard(record);
+    const contentEl = card.querySelector('.fb-content');
+    document.getElementById('fbSub').textContent = '피드백 생성 중...';
 
+    const reader = fbRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let answer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const events = buf.split('\n\n');
+      buf = events.pop();
+      for (const evt of events) {
+        let evName = '';
+        let evData = '';
+        for (const ln of evt.split('\n')) {
+          if (ln.indexOf('event:') === 0) evName = ln.slice(6).trim();
+          else if (ln.indexOf('data:') === 0) evData += ln.slice(5).trim();
+        }
+        if (!evData) continue;
+        let obj;
+        try { obj = JSON.parse(evData); } catch(err) { continue; }
+        if (evName === 'meta' && obj.sources) record.sources = obj.sources;
+        else if (evName === 'delta' && obj.t) { answer += obj.t; contentEl.textContent = answer; }
+        else if (evName === 'err' && obj.error) throw new Error(obj.error);
+      }
+    }
+    if (!answer) throw new Error('응답이 비어 있습니다. 다시 시도해주세요.');
+    record.answer = answer;
+    finalizeFeedbackCard(card, record);
+    addToHistory(record);
+    document.getElementById('fbSub').textContent = record.student + ' · 피드백 완료';
   } catch(e) {
     setError(e.message);
     hideLoading();
@@ -732,15 +781,12 @@ function exportPDF() {
   win.document.close();
 }
 
-function showFeedback(record) {
-  hideLoading();
-
-  // localStorage에 저장
-  addToHistory(record);
-
+function renderFeedbackCard(record) {
   const body = document.getElementById('feedbackBody');
-  const isStruct = record.mode === 'struct';
+  const emptyEl = document.getElementById('fbEmpty');
+  if (emptyEl) emptyEl.style.display = 'none';
 
+  const isStruct = record.mode === 'struct';
   const missionLabel = {
     channel:'채널 기획', content:'콘텐츠 기획', free:'자유 질문'
   }[record.missionType] || record.missionType;
@@ -755,6 +801,7 @@ function showFeedback(record) {
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <span>${record.time}</span>
+        <button class="copy-btn" onclick="registerPlaybook(this)" title="이 Q&A를 플레이북 DB에 등록 (커밍쏜 검수 후 AI에 반영)">📚 플레이북</button>
         <button class="copy-btn" onclick="copyFeedback(this)">복사</button>
       </div>
     </div>
@@ -764,12 +811,11 @@ function showFeedback(record) {
       <div class="fb-mission-text">${escHtml(record.mission)}</div>
     </div>` : ''}
     <div class="fb-content">${escHtml(record.answer)}</div>
-    ${record.sources && record.sources.length > 0 ? `
-    <div class="fb-sources">
-      <div class="fb-src-label">📎 참고한 지식 (${record.sources.length}개)</div>
-      ${record.sources.map(s => `<span class="src-pill">${escHtml(s.docName)}</span>`).join('')}
-    </div>` : ''}
-    <div class="fb-qa" id="qa-${record.id || Date.now()}"></div>
+    <div class="fb-sources" style="display:none">
+      <div class="fb-src-label"></div>
+      <div class="src-pills"></div>
+    </div>
+    <div class="fb-qa"></div>
     <div class="fb-followup">
       <div class="fb-followup-label">💬 추가 질문</div>
       <div class="fb-followup-row">
@@ -780,7 +826,55 @@ function showFeedback(record) {
     </div>
   `;
   body.insertBefore(card, body.firstChild);
+  return card;
+}
+
+function finalizeFeedbackCard(card, record) {
+  if (record.sources && record.sources.length > 0) {
+    const box = card.querySelector('.fb-sources');
+    box.style.display = '';
+    box.querySelector('.fb-src-label').textContent = '📎 참고한 지식 (' + record.sources.length + '개)';
+    box.querySelector('.src-pills').innerHTML = record.sources.map(s => `<span class="src-pill">${escHtml(s.docName)}</span>`).join('');
+  }
+}
+
+function showFeedback(record) {
+  hideLoading();
+  addToHistory(record);
+  const card = renderFeedbackCard(record);
+  finalizeFeedbackCard(card, record);
+  const missionLabel = {
+    channel:'채널 기획', content:'콘텐츠 기획', free:'자유 질문'
+  }[record.missionType] || record.missionType;
   document.getElementById('fbSub').textContent = `${record.student} · ${missionLabel} 피드백 완료`;
+}
+
+async function registerPlaybook(btn) {
+  const card = btn.closest('.fb-card');
+  const mEl = card.querySelector('.fb-mission-text');
+  const question = mEl ? mEl.textContent.trim() : '';
+  const answer = card.querySelector('.fb-content').textContent.trim();
+  if (!question || !answer) { alert('등록할 질문/답변 내용이 없습니다.'); return; }
+  if (btn.dataset.done === '1') return;
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = '등록 중...';
+  try {
+    const r = await fetch('/api/playbook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, answer }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    btn.dataset.done = '1';
+    btn.textContent = '✅ 등록됨';
+    btn.title = '플레이북 DB에 등록 완료 — 커밍쏜 검수(승인) 후 AI에 반영됩니다';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = orig;
+    alert('플레이북 등록 실패: ' + e.message);
+  }
 }
 
 async function askFollowup(input) {

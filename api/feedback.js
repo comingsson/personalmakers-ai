@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+export const config = { supportsResponseStreaming: true };
+
 // ─── 서버사이드 KB 캐시 ───────────────────────────────────────────────────────
 let _kbCache = null;
 function loadKB() {
@@ -388,6 +390,49 @@ ${isPublic
   }
 
   try {
+    if (req.body && req.body.stream) {
+      const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4000, stream: true, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: userPrompt }] }),
+      });
+      if (!upstream.ok || !upstream.body) {
+        const errText = await upstream.text().catch(() => '');
+        return res.status(500).json({ error: 'Claude 스트림 실패: ' + upstream.status + ' ' + errText.slice(0, 180) });
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+      });
+      res.write('event: meta\ndata: ' + JSON.stringify({ sources: hits }) + '\n\n');
+      const reader = upstream.body.getReader();
+      const decoder = new TextDecoder();
+      let sseBuf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        sseBuf += decoder.decode(value, { stream: true });
+        const sseLines = sseBuf.split('\n');
+        sseBuf = sseLines.pop();
+        for (const sseLine of sseLines) {
+          if (sseLine.indexOf('data:') !== 0) continue;
+          const payload = sseLine.slice(5).trim();
+          if (!payload) continue;
+          try {
+            const ev = JSON.parse(payload);
+            if (ev.type === 'content_block_delta' && ev.delta && ev.delta.text) {
+              res.write('event: delta\ndata: ' + JSON.stringify({ t: ev.delta.text }) + '\n\n');
+            } else if (ev.type === 'error') {
+              res.write('event: err\ndata: ' + JSON.stringify({ error: (ev.error && ev.error.message) || 'stream error' }) + '\n\n');
+            }
+          } catch(ignored) {}
+        }
+      }
+      res.write('event: done\ndata: {}\n\n');
+      return res.end();
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
