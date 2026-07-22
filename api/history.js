@@ -1,5 +1,5 @@
 const NOTION_KEY = (process.env.NOTION_API_KEY || '').trim();
-const HISTORY_DB_ID = (process.env.HISTORY_DB_ID || '35721fecf68b4fb4ab9a07d86694b29c').trim();
+const HISTORY_DB_ID = (process.env.HISTORY_DB_ID || '54254bd56fe74f88a9186c568e13dcd8').trim();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
