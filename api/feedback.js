@@ -203,14 +203,22 @@ async function loadPlaybookFromNotion(notionKey) {
         });
         if (blocksRes.ok) {
           const blocksData = await blocksRes.json();
-          answer = (blocksData.results || [])
-            .filter(block => !block.type.startsWith('heading'))
-            .map(block => {
-              const content = block[block.type];
-              if (!content?.rich_text) return '';
-              return content.rich_text.map(t => t.plain_text).join('');
-            })
-            .filter(Boolean).join('\n');
+          const _blocks = blocksData.results || [];
+          const _secs = {};
+          let _cur = '';
+          for (const block of _blocks) {
+            if (block.type.startsWith('heading')) {
+              _cur = ((block[block.type] || {}).rich_text || []).map(t => t.plain_text).join('').trim();
+              continue;
+            }
+            const content = block[block.type];
+            if (!content || !content.rich_text) continue;
+            const txt = content.rich_text.map(t => t.plain_text).join('');
+            if (txt) (_secs[_cur] = _secs[_cur] || []).push(txt);
+          }
+          const _boss = Object.keys(_secs).filter(k => k.indexOf('커밍쏜') >= 0).map(k => _secs[k].join('\n')).join('\n').trim();
+          const _rest = Object.keys(_secs).filter(k => k.indexOf('커밍쏜') < 0).map(k => _secs[k].join('\n')).join('\n').trim();
+          answer = (_boss ? '[커밍쏜 피드백 — 이 내용을 최우선 기준으로 삼을 것]\n' + _boss + '\n\n' : '') + _rest;
         }
         return { q, category, answer };
       })
