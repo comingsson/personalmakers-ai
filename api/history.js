@@ -1,5 +1,5 @@
 const NOTION_KEY = (process.env.NOTION_API_KEY || '').trim();
-const HISTORY_DB_ID = (process.env.HISTORY_DB_ID || '35721fecf68b4fb4ab9a07d86694b29c').trim();
+const PLAYBOOK_DB_ID = (process.env.PLAYBOOK_DB_ID || '3b9818e3e2c94735b9f1d1c75bf73ff2').trim();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -11,9 +11,9 @@ export default async function handler(req, res) {
     const ans = String(answer);
     const chunks = [];
     for (let i = 0; i < ans.length && chunks.length < 90; i += 1900) chunks.push(ans.slice(i, i + 1900));
-    const para = (c) => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: c } }] } });
+    const para = (c) => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: c ? [{ type: 'text', text: { content: c } }] : [] } });
     const head = (c) => ({ object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: c } }] } });
-    const children = [head('질문'), para(String(question).slice(0, 1900)), head('답변'), ...chunks.map(para)];
+    const children = [head('커밍쏜 피드백'), para(''), head('답변'), ...chunks.map((c) => para(c))];
 
     const r = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
@@ -23,13 +23,15 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        parent: { database_id: HISTORY_DB_ID },
+        parent: { database_id: PLAYBOOK_DB_ID },
         properties: {
-          '질문': { title: [{ type: 'text', text: { content: String(question).slice(0, 190) } }] },
-          '수강생': { rich_text: [{ type: 'text', text: { content: String(student || '').slice(0, 190) } }] },
-          '미션유형': { rich_text: [{ type: 'text', text: { content: String(missionType || '').slice(0, 190) } }] },
+          '질문': { title: [{ type: 'text', text: { content: String(question).replace(/\s+/g, ' ').trim().slice(0, 120) } }] },
+          '원본 질문': { rich_text: [{ type: 'text', text: { content: String(question).slice(0, 1900) } }] },
+          '상태': { select: { name: '자동기록' } },
           '유형': { select: { name: type === 'followup' ? '재질문' : '피드백' } },
           '말투': { select: { name: mode === 'conv' ? '구어체' : '문어체' } },
+          '수강생': { rich_text: [{ type: 'text', text: { content: String(student || '').slice(0, 190) } }] },
+          '미션유형': { rich_text: [{ type: 'text', text: { content: String(missionType || '').slice(0, 190) } }] },
         },
         children,
       }),
