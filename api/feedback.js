@@ -20,6 +20,16 @@ function loadKB() {
     } catch(e2) {
       console.warn('base2.json 로드 실패(무시):', e2.message);
     }
+    try {
+      const p3 = path.join(process.cwd(), 'knowledge', 'base3.json');
+      const kb3 = JSON.parse(fs.readFileSync(p3, 'utf-8'));
+      if (kb3 && kb3.documents) {
+        kb.documents = (kb.documents || []).concat(kb3.documents);
+        kb.totalChunks = (kb.totalChunks || 0) + (kb3.totalChunks || 0);
+      }
+    } catch(e3) {
+      console.warn('base3.json 로드 실패(무시):', e3.message);
+    }
     _kbCache = kb;
     return _kbCache;
   } catch(e) {
