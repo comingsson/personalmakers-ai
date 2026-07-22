@@ -401,6 +401,12 @@ textarea.txa { resize: vertical; line-height: 1.7; }
 .img-status.done { color: #16a34a; }
 .img-status.error { color: #ef4444; }
 </style>
+<style>
+.fb-meta{align-items:center;gap:6px}
+.fb-meta button,.fb-card button,.fb-badge{white-space:nowrap;flex-shrink:0}
+.fb-meta button{border:1px solid #e3e6ee;border-radius:8px;background:#fff;padding:5px 11px;font-size:12.5px;color:#4a5568;cursor:pointer;transition:all .15s;line-height:1.3}
+.fb-meta button:hover{background:#f5f7fb;border-color:#c9d2e3}
+</style>
 </head>
 <body>
 
@@ -1110,6 +1116,46 @@ loadKnowledgeBase();
 setTimeout(updateHistoryBtns, 100);
 
 
+</script>
+<script>
+(function(){
+  var _f = window.fetch;
+  function logH(p){ try { _f('/api/history', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p)}); } catch(e){} }
+  window.fetch = function(url, opt){
+    var p = _f.apply(this, arguments);
+    try {
+      if (typeof url === 'string' && url.indexOf('/api/feedback') === 0 && opt && opt.method === 'POST') {
+        var b = JSON.parse(opt.body || '{}');
+        p = p.then(function(res){
+          try {
+            var isFu = typeof b.contextQ !== 'undefined';
+            var base = { student: b.studentName || '', missionType: b.missionType || '', mode: b.mode || '', type: isFu ? 'followup' : 'feedback', question: b.question || '' };
+            var ct = (res.headers.get('content-type') || '');
+            if (ct.indexOf('text/event-stream') >= 0) {
+              var reader = res.clone().body.getReader(); var dec = new TextDecoder(); var buf = ''; var txt = '';
+              (function pump(){ reader.read().then(function(x){
+                if (x.done) { if (txt) logH(Object.assign({answer: txt}, base)); return; }
+                buf += dec.decode(x.value, {stream:true});
+                var evs = buf.split('\n\n'); buf = evs.pop();
+                for (var i=0;i<evs.length;i++){
+                  var ev='', data='';
+                  var lines = evs[i].split('\n');
+                  for (var j=0;j<lines.length;j++){ var l=lines[j]; if (l.indexOf('event:')===0) ev=l.slice(6).trim(); else if (l.indexOf('data:')===0) data+=l.slice(5).trim(); }
+                  if (ev==='delta' && data) { try { var o=JSON.parse(data); if (o.t) txt+=o.t; } catch(err){} }
+                }
+                pump();
+              }).catch(function(){ if (txt) logH(Object.assign({answer: txt}, base)); }); })();
+            } else if (ct.indexOf('application/json') >= 0) {
+              res.clone().json().then(function(d){ if (d && d.feedback) logH(Object.assign({answer: d.feedback}, base)); }).catch(function(){});
+            }
+          } catch(e){}
+          return res;
+        });
+      }
+    } catch(e){}
+    return p;
+  };
+})();
 </script>
 </body>
 </html>
