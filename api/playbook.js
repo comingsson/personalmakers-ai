@@ -20,6 +20,8 @@ export default async function handler(req, res) {
   }
 
   const children = [
+    { object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '커밍쏜 피드백' } }] } },
+    { object: 'block', type: 'paragraph', paragraph: { rich_text: [] } },
     { object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '답변 (AI 초안 — 검수 필요)' } }] } },
     ...chunks.map(c => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: c } }] } })),
   ];
@@ -38,6 +40,7 @@ export default async function handler(req, res) {
           '질문': { title: [{ type: 'text', text: { content: title } }] },
           '원본 질문': { rich_text: [{ type: 'text', text: { content: String(question).slice(0, 1900) } }] },
           '상태': { select: { name: '답변작성' } },
+          '유형': { select: { name: '수동등록' } },
         },
         children,
       }),
