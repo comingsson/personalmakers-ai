@@ -213,3 +213,76 @@ function clearAtt() {
   document.getElementById('attLabel').style.display = 'none';
 }
 </script>
+<script>
+// ─── 렌더링 ───
+function renderAll() {
+  var w = document.getElementById('msgs');
+  w.innerHTML = '';
+  if (!turns.length) {
+    w.appendChild(buildEmpty());
+    return;
+  }
+  turns.forEach(function(t) {
+    w.appendChild(userBubble(t.q, t.att));
+    if (t.a != null) { var b = aiBubble(); b.text.innerHTML = md(t.a); addActions(b, t.q, t.a, t.sources); }
+  });
+  scrollBottom();
+}
+function buildEmpty() {
+  var tpl = document.getElementById('emptyTpl');
+  var d = document.createElement('div');
+  d.innerHTML = tpl.innerHTML;
+  d.className = 'empty';
+  d.id = 'empty';
+  return d;
+}
+function userBubble(q, att) {
+  var d = document.createElement('div');
+  d.className = 'msg-u';
+  d.textContent = q;
+  if (att) { var a = document.createElement('span'); a.className = 'att'; a.textContent = '🖼 워크시트 첨부됨'; d.appendChild(a); }
+  return d;
+}
+function aiBubble() {
+  var wrap = document.createElement('div'); wrap.className = 'msg-a';
+  var av = document.createElement('div'); av.className = 'avatar'; av.textContent = 'P';
+  var bub = document.createElement('div'); bub.className = 'bubble';
+  var tx = document.createElement('div'); tx.className = 'atext';
+  bub.appendChild(tx); wrap.appendChild(av); wrap.appendChild(bub);
+  document.getElementById('msgs').appendChild(wrap);
+  return { wrap: wrap, bubble: bub, text: tx };
+}
+function addSources(b, sources) {
+  if (!sources || !sources.length) return;
+  var sd = document.createElement('div'); sd.className = 'srcs';
+  var seen = {};
+  sources.forEach(function(s) {
+    var n = (s && (s.docName || s.name)) || String(s);
+    if (seen[n]) return; seen[n] = 1;
+    var c = document.createElement('span'); c.className = 'src'; c.textContent = '📎 ' + n;
+    sd.appendChild(c);
+  });
+  b.bubble.appendChild(sd);
+}
+function addActions(b, q, a, sources) {
+  addSources(b, sources);
+  var ad = document.createElement('div'); ad.className = 'acts';
+  var learn = document.createElement('button'); learn.className = 'act'; learn.textContent = '🧠 AI 학습시키기';
+  learn.onclick = async function() {
+    if (learn.dataset.done) return;
+    learn.disabled = true; learn.textContent = '등록 중…';
+    try {
+      var r = await fetch('/api/playbook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, answer: a }) });
+      var d = await r.json();
+      if (d.error) throw new Error(d.error);
+      learn.dataset.done = '1'; learn.textContent = '✅ 검수 대기 등록됨';
+    } catch(e) { learn.disabled = false; learn.textContent = '🧠 AI 학습시키기'; alert('등록 실패: ' + e.message); }
+  };
+  var cp = document.createElement('button'); cp.className = 'act'; cp.textContent = '복사';
+  cp.onclick = function() { navigator.clipboard.writeText(a); cp.textContent = '✓ 복사됨'; setTimeout(function() { cp.textContent = '복사'; }, 1500); };
+  ad.appendChild(learn); ad.appendChild(cp);
+  b.bubble.appendChild(ad);
+}
+function saveChat() { try { localStorage.setItem('pm_chat_v1', JSON.stringify(turns.slice(-30))); } catch(e) {} }
+function loadChat() { try { turns = JSON.parse(localStorage.getItem('pm_chat_v1') || '[]'); } catch(e) { turns = []; } }
+</script>
