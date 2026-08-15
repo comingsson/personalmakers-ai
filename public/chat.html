@@ -73,3 +73,64 @@ textarea#inp:focus { outline:none; border-color:var(--accent); }
 .pw-err { color:#e07b6f; font-size:11.5px; height:16px; margin-top:8px; }
 @media (max-width:640px) { .chip-in { width:104px; } .msg-u { max-width:88%; } .chatwrap { padding:18px 12px; } }
 </style>
+<body>
+<div id="pwGate">
+  <div class="pw-box">
+    <h2>Personalmakers AI</h2>
+    <p>디렉터 전용 · 비밀번호를 입력하세요</p>
+    <input type="password" id="pwInput" maxlength="10" autocomplete="off">
+    <div class="pw-err" id="pwErr"></div>
+    <button onclick="checkPW()">입장하기</button>
+  </div>
+</div>
+
+<header>
+  <span class="logo">Personalmakers AI</span>
+  <div>
+    <div class="htitle">피드백 어시스턴트</div>
+    <div class="hsub">무엇이든 물어보세요 · 커밍쏜의 지식과 기준으로 답합니다</div>
+  </div>
+  <div class="hspace"></div>
+  <button class="hbtn" onclick="location.href='classic.html'">기존 화면</button>
+  <button class="hbtn" onclick="newChat()">＋ 새 대화</button>
+</header>
+
+<main id="main">
+  <div class="chatwrap" id="msgs">
+    <div class="empty" id="empty">
+      <div class="big">💬</div>
+      <h3>무엇을 도와드릴까요?</h3>
+      <p>수강생 미션 붙여넣기, 브랜딩 로드맵 점검, 운영 질문 —<br>커밍쏜의 코칭 기록과 팀 플레이북을 근거로 답변합니다.</p>
+      <div class="sugs">
+        <div class="sug" onclick="useSug(this)">수강생 로드맵 붙여넣고 피드백 받기</div>
+        <div class="sug" onclick="useSug(this)">주제가 너무 넓다는데 어떻게 좁혀줘야 할까?</div>
+        <div class="sug" onclick="useSug(this)">조회수가 안 나오는 수강생, 뭘 먼저 봐야 해?</div>
+        <div class="sug" onclick="useSug(this)">수익화 시작 시점은 어떻게 판단해?</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="composer">
+    <div class="chips">
+      <input class="chip-in" id="stuName" placeholder="수강생 이름 (선택)">
+      <select class="chip-in" id="mtype">
+        <option value="channel">채널 기획</option>
+        <option value="content">콘텐츠 기획</option>
+        <option value="free" selected>자유 질문</option>
+      </select>
+      <div class="mode-tg">
+        <button id="mConv" class="on" onclick="setMode('conv')">구어체</button>
+        <button id="mRep" onclick="setMode('report')">문어체</button>
+      </div>
+      <button class="attbtn" id="attBtn" title="워크시트 캡처 첨부 (OCR)" onclick="document.getElementById('file').click()">📎</button>
+      <input type="file" id="file" accept="image/*" style="display:none" onchange="onFile(this)">
+      <span class="att-label" id="attLabel"><span id="attName"></span><span class="x" onclick="clearAtt()">✕</span></span>
+    </div>
+    <div class="inrow">
+      <textarea id="inp" rows="1" placeholder="무엇이든 물어보세요… (Shift+Enter 줄바꿈)"></textarea>
+      <button id="sendBtn" onclick="send()">➤</button>
+    </div>
+  </div>
+</footer>
