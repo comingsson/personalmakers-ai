@@ -286,3 +286,138 @@ function addActions(b, q, a, sources) {
 function saveChat() { try { localStorage.setItem('pm_chat_v1', JSON.stringify(turns.slice(-30))); } catch(e) {} }
 function loadChat() { try { turns = JSON.parse(localStorage.getItem('pm_chat_v1') || '[]'); } catch(e) { turns = []; } }
 </script>
+<script>
+// ─── 전송 + 스트리밍 ───
+var EMPTY_HTML = '';
+function buildEmpty() { var d = document.createElement('div'); d.innerHTML = EMPTY_HTML; return d.firstElementChild; }
+
+async function send() {
+  if (busy) return;
+  var t = document.getElementById('inp');
+  var text = t.value.trim();
+  if (!text && !ocrText) return;
+  busy = true;
+  document.getElementById('sendBtn').disabled = true;
+  var emptyEl = document.getElementById('empty');
+  if (emptyEl) emptyEl.remove();
+
+  var student = document.getElementById('stuName').value.trim();
+  var mtypeVal = document.getElementById('mtype').value;
+  var hadAtt = !!ocrText;
+  var question = text || '(첨부한 워크시트 내용을 검토해주세요)';
+  if (ocrText) question += '\n\n[첨부 워크시트 내용]\n' + ocrText;
+
+  var extra = '';
+  if (student) extra += '수강생 이름: ' + student + '\n';
+  if (turns.length) {
+    extra += '\n[이전 대화 — 맥락 참고용]\n';
+    turns.slice(-3).forEach(function(x) {
+      extra += 'Q: ' + x.q.slice(0, 500) + '\nA: ' + (x.a || '').slice(0, 900) + '\n---\n';
+    });
+  }
+
+  var turn = { q: text || '워크시트 첨부', att: hadAtt, a: null, sources: [] };
+  turns.push(turn);
+  document.getElementById('msgs').appendChild(userBubble(turn.q, hadAtt));
+  var b = aiBubble();
+  b.text.innerHTML = '<span class="cursor"></span>';
+  scrollBottom();
+  t.value = ''; autoGrow(); clearAtt();
+
+  var body = { question: question, category: mtypeVal, missionType: MTLABEL[mtypeVal], studentName: student, extraContext: extra, mode: mode, stream: true };
+  if (turns.length > 1) body.contextQ = '1';
+
+  try {
+    var r = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    var ct = r.headers.get('content-type') || '';
+    if (ct.indexOf('text/event-stream') < 0) {
+      var d = await r.json();
+      if (d.error) throw new Error(d.error);
+      turn.a = d.feedback || ''; turn.sources = d.sources || [];
+      b.text.innerHTML = md(turn.a); addActions(b, question, turn.a, turn.sources);
+    } else {
+      var reader = r.body.getReader(); var dec = new TextDecoder();
+      var buf = '', acc = '';
+      while (true) {
+        var x = await reader.read();
+        if (x.done) break;
+        buf += dec.decode(x.value, { stream: true });
+        var evs = buf.split('\n\n'); buf = evs.pop();
+        for (var i = 0; i < evs.length; i++) {
+          var ev = '', data = '';
+          var lines = evs[i].split('\n');
+          for (var j = 0; j < lines.length; j++) {
+            var l = lines[j];
+            if (l.indexOf('event:') === 0) ev = l.slice(6).trim();
+            else if (l.indexOf('data:') === 0) data += l.slice(5).trim();
+          }
+          if (!data) continue;
+          var o; try { o = JSON.parse(data); } catch(e) { continue; }
+          if (ev === 'meta') turn.sources = o.sources || [];
+          else if (ev === 'delta' && o.t) { acc += o.t; b.text.innerHTML = md(acc) + '<span class="cursor"></span>'; scrollBottom(); }
+          else if (ev === 'error') throw new Error(o.message || '스트리밍 오류');
+        }
+      }
+      turn.a = acc;
+      b.text.innerHTML = md(acc);
+      addActions(b, question, acc, turn.sources);
+    }
+    saveChat();
+  } catch(e) {
+    var ed = document.createElement('div'); ed.className = 'err'; ed.textContent = '⚠️ ' + e.message;
+    b.bubble.appendChild(ed);
+    b.text.innerHTML = b.text.innerHTML.replace('<span class="cursor"></span>', '');
+    turns.pop();
+  }
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+  scrollBottom();
+}
+
+// ─── 자동 기록 (노션 히스토리) ───
+(function() {
+  var _f = window.fetch;
+  function logH(p) { try { _f('/api/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }); } catch(e) {} }
+  window.fetch = function(url, opt) {
+    var p = _f.apply(this, arguments);
+    try {
+      if (typeof url === 'string' && url.indexOf('/api/feedback') === 0 && opt && opt.method === 'POST') {
+        var b = JSON.parse(opt.body || '{}');
+        p = p.then(function(res) {
+          try {
+            var isFu = typeof b.contextQ !== 'undefined';
+            var base = { student: b.studentName || '', missionType: b.missionType || '', mode: b.mode || '', type: isFu ? 'followup' : 'feedback', question: b.question || '' };
+            var ct = (res.headers.get('content-type') || '');
+            if (ct.indexOf('text/event-stream') >= 0) {
+              var reader = res.clone().body.getReader(); var dec = new TextDecoder(); var buf = ''; var txt = '';
+              (function pump() { reader.read().then(function(x) {
+                if (x.done) { if (txt) logH(Object.assign({ answer: txt }, base)); return; }
+                buf += dec.decode(x.value, { stream: true });
+                var evs = buf.split('\n\n'); buf = evs.pop();
+                for (var i = 0; i < evs.length; i++) {
+                  var ev = '', data = '';
+                  var lines = evs[i].split('\n');
+                  for (var j = 0; j < lines.length; j++) { var l = lines[j]; if (l.indexOf('event:') === 0) ev = l.slice(6).trim(); else if (l.indexOf('data:') === 0) data += l.slice(5).trim(); }
+                  if (ev === 'delta' && data) { try { var o = JSON.parse(data); if (o.t) txt += o.t; } catch(err) {} }
+                }
+                pump();
+              }).catch(function() { if (txt) logH(Object.assign({ answer: txt }, base)); }); })();
+            } else if (ct.indexOf('application/json') >= 0) {
+              res.clone().json().then(function(d) { if (d && d.feedback) logH(Object.assign({ answer: d.feedback }, base)); }).catch(function() {});
+            }
+          } catch(e) {}
+          return res;
+        });
+      }
+    } catch(e) {}
+    return p;
+  };
+})();
+
+// ─── Init ───
+EMPTY_HTML = document.getElementById('empty').outerHTML;
+loadChat();
+renderAll();
+</script>
+</body>
+</html>
