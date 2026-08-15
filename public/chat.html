@@ -446,3 +446,90 @@ body.dragging footer { outline:2px dashed var(--accent); outline-offset:-4px; bo
   #sideTg { display:inline-block; }
 }
 </style>
+<script>
+// ─── v2: 대화 목록 + 수강생별 세션 + 붙여넣기/드래그 ───
+var convs = [], activeId = null;
+function loadConvs() { try { convs = JSON.parse(localStorage.getItem('pm_convs_v2') || '[]'); } catch(e) { convs = []; } }
+function persistConvs() { try { localStorage.setItem('pm_convs_v2', JSON.stringify(convs.slice(0, 60))); } catch(e) {} }
+function activeConv() { return convs.find(function(c) { return c.id === activeId; }); }
+
+saveChat = function() {
+  var c = activeConv();
+  if (!c) { c = { id: String(Date.now()), title: '', student: '', turns: [], ts: 0 }; convs.unshift(c); activeId = c.id; }
+  c.turns = turns; c.ts = Date.now();
+  c.student = document.getElementById('stuName').value.trim();
+  if (!c.title && turns.length) c.title = turns[0].q.slice(0, 34);
+  convs.sort(function(a, b) { return b.ts - a.ts; });
+  persistConvs(); renderSide();
+};
+newChat = function() { turns = []; activeId = null; clearAtt(); document.getElementById('stuName').value = ''; renderAll(); renderSide(); document.body.classList.remove('side-open'); };
+function openConv(id) {
+  var c = convs.find(function(x) { return x.id === id; });
+  if (!c) return;
+  activeId = id; turns = c.turns || [];
+  document.getElementById('stuName').value = c.student || '';
+  renderAll(); renderSide(); document.body.classList.remove('side-open');
+}
+function delConv(id, ev) {
+  ev.stopPropagation();
+  if (!confirm('이 대화를 삭제할까요?')) return;
+  convs = convs.filter(function(c) { return c.id !== id; });
+  if (activeId === id) { activeId = null; turns = []; renderAll(); }
+  persistConvs(); renderSide();
+}
+function renderSide() {
+  var list = document.getElementById('sList');
+  if (!list) return;
+  list.innerHTML = '';
+  convs.forEach(function(c) {
+    var d = document.createElement('div');
+    d.className = 's-item' + (c.id === activeId ? ' on' : '');
+    d.onclick = function() { openConv(c.id); };
+    var t = document.createElement('span'); t.className = 't'; t.textContent = c.title || '새 대화'; d.appendChild(t);
+    if (c.student) { var s = document.createElement('span'); s.className = 'stu'; s.textContent = c.student; d.appendChild(s); }
+    var x = document.createElement('span'); x.className = 'del'; x.textContent = '✕'; x.onclick = function(ev) { delConv(c.id, ev); }; d.appendChild(x);
+    list.appendChild(d);
+  });
+}
+// 사이드바 DOM 구성
+(function() {
+  var aside = document.createElement('aside'); aside.id = 'side';
+  aside.innerHTML = '<button class="s-new" onclick="newChat()">＋ 새 대화</button><div class="s-head">대화 목록</div><div class="s-list" id="sList"></div>';
+  document.body.appendChild(aside);
+  document.body.classList.add('has-side');
+  var tg = document.createElement('button'); tg.className = 'hbtn'; tg.id = 'sideTg'; tg.textContent = '☰';
+  tg.onclick = function() { document.body.classList.toggle('side-open'); };
+  var hdr = document.querySelector('header');
+  hdr.insertBefore(tg, hdr.firstChild);
+})();
+// 이미지 붙여넣기 (Ctrl+V) + 드래그앤드롭
+function handleImageFile(f) {
+  if (!f || f.type.indexOf('image') !== 0) return;
+  var dt = new DataTransfer(); dt.items.add(f);
+  var input = document.getElementById('file');
+  input.files = dt.files;
+  onFile(input);
+}
+document.addEventListener('paste', function(e) {
+  var items = (e.clipboardData || {}).items || [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') === 0) { handleImageFile(items[i].getAsFile()); e.preventDefault(); return; }
+  }
+});
+document.addEventListener('dragover', function(e) { e.preventDefault(); document.body.classList.add('dragging'); });
+document.addEventListener('dragleave', function(e) { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+document.addEventListener('drop', function(e) {
+  e.preventDefault(); document.body.classList.remove('dragging');
+  var f = (e.dataTransfer.files || [])[0];
+  handleImageFile(f);
+});
+// v2 init: 구버전 마이그레이션 + 최근 대화 열기
+(function() {
+  loadConvs();
+  try {
+    var old = JSON.parse(localStorage.getItem('pm_chat_v1') || '[]');
+    if (old.length && !convs.length) { convs.push({ id: String(Date.now()), title: old[0].q.slice(0, 34), student: '', turns: old, ts: Date.now() }); persistConvs(); localStorage.removeItem('pm_chat_v1'); }
+  } catch(e) {}
+  if (convs.length) { openConv(convs[0].id); } else { turns = []; renderAll(); renderSide(); }
+})();
+</script>
