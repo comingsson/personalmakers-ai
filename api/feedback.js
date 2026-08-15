@@ -245,6 +245,40 @@ function loadGuidelinesFromFile() {
   }
 }
 
+let _stuCache = {};
+async function loadStudentHistory(key, name) {
+  const now = Date.now();
+  const c = _stuCache[name];
+  if (c && now - c.ts < 5 * 60 * 1000) return c.text;
+  const DB = (process.env.PLAYBOOK_DB_ID || '3b9818e3e2c94735b9f1d1c75bf73ff2').trim();
+  const r = await fetch(`https://api.notion.com/v1/databases/${DB}/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filter: { property: '수강생', rich_text: { equals: name } }, sorts: [{ property: '등록일', direction: 'descending' }], page_size: 4 })
+  });
+  if (!r.ok) return '';
+  const d = await r.json();
+  const rows = (d.results || []).slice(0, 3);
+  if (!rows.length) { _stuCache[name] = { ts: now, text: '' }; return ''; }
+  const parts = [];
+  for (const pg of rows) {
+    const props = pg.properties || {};
+    const q = ((props['원본 질문'] || {}).rich_text || []).map(t => t.plain_text).join('') || ((props['질문'] || {}).title || []).map(t => t.plain_text).join('');
+    let ans = '';
+    try {
+      const br = await fetch(`https://api.notion.com/v1/blocks/${pg.id}/children?page_size=50`, { headers: { Authorization: `Bearer ${key}`, 'Notion-Version': '2022-06-28' } });
+      if (br.ok) {
+        const bd = await br.json();
+        ans = (bd.results || []).filter(b => !b.type.startsWith('heading')).map(b => { const cc = b[b.type]; return cc && cc.rich_text ? cc.rich_text.map(t => t.plain_text).join('') : ''; }).filter(Boolean).join('\n');
+      }
+    } catch(e) {}
+    parts.push('과거 질문: ' + q.slice(0, 300) + (ans ? '\n당시 답변 요약: ' + ans.slice(0, 500) : ''));
+  }
+  const text = '[' + name + ' 수강생의 최근 상담 기록 — 이 맥락을 이어서 답변할 것]\n' + parts.join('\n---\n');
+  _stuCache[name] = { ts: now, text };
+  return text;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -270,9 +304,18 @@ export default async function handler(req, res) {
   const GEMINI_KEY = process.env.GEMINI_API_KEY;
   if (!CLAUDE_KEY) return res.status(500).json({ error: 'CLAUDE_API_KEY not configured' });
 
-  const { question, category, mode, isPublic, studentName, extraContext, creatorOptions } = req.body;
+  let { question, category, mode, isPublic, studentName, extraContext, creatorOptions } = req.body;
 
   // ─── 서버사이드 RAG 검색 ─────────────────────────────────────────────────────
+  // ─── 수강생 기억: 과거 상담 기록 자동 로드 ───
+  const NOTION_KEY_S = (process.env.NOTION_API_KEY || '').trim();
+  if (studentName && String(studentName).trim() && NOTION_KEY_S) {
+    try {
+      const stuCtx = await loadStudentHistory(NOTION_KEY_S, String(studentName).trim());
+      if (stuCtx) extraContext = (extraContext ? extraContext + '\n\n' : '') + stuCtx;
+    } catch(e) { console.warn('수강생 기록 로드 실패(무시):', e.message); }
+  }
+
   let hits = [];
   if (GEMINI_KEY && question) {
     try {
