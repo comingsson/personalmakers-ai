@@ -321,7 +321,7 @@ export default async function handler(req, res) {
     try {
       const kb = loadKB();
       if (kb) {
-        const queryVec = await embedText(question, GEMINI_KEY);
+        const queryVec = await embedText(String(req.body.searchQuery || question), GEMINI_KEY);
         hits = retrieve(kb, queryVec, 6);
       }
     } catch(e) {
@@ -419,7 +419,7 @@ ${outputList.includes('썸네일 아이디어') ? `## 🖼 썸네일 아이디�
       playbook.map((p, i) => `Q${i+1}. [${p.category}] ${p.q}\nA${i+1}. ${p.answer}`).join('\n\n')
     : '';
 
-  const SYSTEM_PROMPT = `${personaBase}
+  let SYSTEM_PROMPT = `${personaBase}
 
 [핵심 철학]
 ${corePhilosophy}
@@ -451,6 +451,12 @@ ${isPublic
   }
 
   try {
+    // ─── 대화(챗) 모드: 형식 제약 해제 + 커밍쏜 대화 원칙 ───
+    if (req.body && req.body.chat) {
+      SYSTEM_PROMPT += '\n\n[대화 모드 지침 — 위의 출력 형식·분량 지시보다 우선]\n지금은 디렉터와 실시간 채팅 중이다.\n- 대화 흐름에 맞는 자연스러운 길이로 답한다. 간단한 질문엔 간결하게, 로드맵 점검이나 기획 요청엔 깊이 있게.\n- 커밍쏜의 코칭 방식을 따른다: 1) 잘한 점을 인정하되 핵심 문제를 정면으로 짚는다 2) 왜?를 파고든다 — 결핍이 모호하면 메시지도 타겟도 흔들린다 3) 소재는 대중성으로, 차별화는 메시지·페르소나·라이프스타일로 만든다 4) 수익 불안 때문에 방향을 바꾸려는 패턴을 경계시킨다 5) 마지막엔 실행 가능한 다음 스텝을 제시한다.\n- 판단에 필요한 정보가 부족하면 먼저 되묻는다. 근거 없는 확신 대신 참고 자료와 과거 사례에 기반해 말한다.\n- 아이디어 제안 요청에는 구체적 예시(제목·훅·콘텐츠 구조)까지 낸다.\n- 참고 자료에 관련 사례가 있으면 자연스럽게 인용한다.';
+      userPrompt = (extraContext ? '[맥락 정보]\n' + extraContext + '\n\n' : '') + '[참고 자료]\n' + contextStr + '\n\n---\n\n디렉터의 메시지: ' + question;
+    }
+
     if (req.body && req.body.stream) {
       const upstream = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
