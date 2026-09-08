@@ -281,6 +281,21 @@ function addActions(b, q, a, sources) {
   var cp = document.createElement('button'); cp.className = 'act'; cp.textContent = '복사';
   cp.onclick = function() { navigator.clipboard.writeText(a); cp.textContent = '✓ 복사됨'; setTimeout(function() { cp.textContent = '복사'; }, 1500); };
   ad.appendChild(learn); ad.appendChild(cp);
+  var up = document.createElement('button'); up.className = 'act'; up.textContent = '👍';
+  var dn = document.createElement('button'); dn.className = 'act'; dn.textContent = '👎';
+  function sendRate(btn, rating) {
+    if (btn.dataset.done) return;
+    var comment = '';
+    if (rating === 'down') comment = prompt('어떤 점이 아쉬웠나요? (선택, 취소해도 기록됩니다)') || '';
+    up.dataset.done = dn.dataset.done = '1';
+    up.disabled = dn.disabled = true;
+    btn.textContent = rating === 'up' ? '👍 반영됨' : '👎 반영됨';
+    fetch('/api/rate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, answer: a, rating: rating, student: document.getElementById('stuName').value.trim(), comment: comment }) }).catch(function() {});
+  }
+  up.onclick = function() { sendRate(up, 'up'); };
+  dn.onclick = function() { sendRate(dn, 'down'); };
+  ad.appendChild(up); ad.appendChild(dn);
+
   b.bubble.appendChild(ad);
 }
 function saveChat() { try { localStorage.setItem('pm_chat_v1', JSON.stringify(turns.slice(-30))); } catch(e) {} }
