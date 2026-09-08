@@ -324,7 +324,7 @@ async function send() {
   scrollBottom();
   t.value = ''; autoGrow(); clearAtt();
 
-  var body = { question: question, category: mtypeVal, missionType: MTLABEL[mtypeVal], studentName: student, extraContext: extra, mode: mode, stream: true };
+  var body = { question: question, chat: true, searchQuery: (text || question).slice(0, 800), category: mtypeVal, missionType: MTLABEL[mtypeVal], studentName: student, extraContext: extra, mode: mode, stream: true };
   if (turns.length > 1) body.contextQ = '1';
 
   try {
